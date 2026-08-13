@@ -60,19 +60,8 @@
       tbody.innerHTML = data.tokens.map((t, i) => `
         <tr class="hover:bg-gray-900/60">
           <td class="px-4 py-3 text-gray-500">${i+1}</td>
-          <td class="px-4 py-3 font-mono text-xs">${t.token.slice(0,6)}...${t.token.slice(-4)}</td>
-          <td class="px-4 py-3 text-right font-medium text-lime-400">${fmt(t.current_lp_usd)}</td>
-          <td class="px-4 py-3 text-right">${fmt(t.genesis_lp_usd)}</td>
-          <td class="px-4 py-3 text-right">${changeCell(t.change_24h)}</td>
-          <td class="px-4 py-3 text-right">${changeCell(t.change_7d)}</td>
           <td class="px-4 py-3">
-            <a href="https://pools.trade/t/${t.token}" target="_blank" class="text-lime-400 hover:underline text-xs">Trade</a>
+            <div class="font-medium">${t.symbol || "???"}</div>
+            <div class="text-xs text-gray-500 font-mono">${t.token.slice(0,6)}...${t.token.slice(-4)}</div>
           </td>
-        </tr>
-      `).join("");
-    }
-
-    load();
-  </script>
-</body>
-</html>
+          <td class="px-4 py-3 text
