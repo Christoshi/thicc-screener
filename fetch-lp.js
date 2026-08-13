@@ -8,8 +8,10 @@ const LAUNCHPADS = [
   "0x60d73b21cdf2ea846ab3d58699bbbb8f29d72491",
 ];
 const HISTORY_PATH = "data/history.json";
+const KNOWN_PATH = "data/known.json";   // persistent list of token + poolId
 const OUTPUT_PATH = "data.json";
-const TOP_N = 100;
+const TOP_N = 120;
+const MAX_POOLS_PER_RUN = 800;          // keep under free-tier limits
 
 async function bitqueryFetch(query) {
   const res = await fetch("https://streaming.bitquery.io/graphql", {
@@ -25,12 +27,12 @@ async function bitqueryFetch(query) {
   return json.data;
 }
 
-async function getLaunches() {
+async function getNewLaunches() {
   const query = `
     {
       EVM(network: robinhood) {
         Events(
-          limit: {count: 2000}
+          limit: {count: 1500}
           orderBy: {descending: Block_Time}
           where: {
             LogHeader: {Address: {in: ${JSON.stringify(LAUNCHPADS)}}}
@@ -75,31 +77,39 @@ async function getLaunches() {
 
 async function getLP(poolIds) {
   if (poolIds.length === 0) return {};
-  const query = `
-    {
-      EVM(network: robinhood) {
-        DEXPoolEvents(
-          limit: {count: 4000}
-          orderBy: {descending: Block_Time}
-          where: {
-            PoolEvent: {Pool: {PoolId: {in: ${JSON.stringify(poolIds)}}}}
-          }
-        ) {
-          PoolEvent {
-            Pool { PoolId }
-            Liquidity { AmountCurrencyAInUSD }
+  // split into chunks of 200 to stay safe
+  const chunks = [];
+  for (let i = 0; i < poolIds.length; i += 200) {
+    chunks.push(poolIds.slice(i, i + 200));
+  }
+
+  const map = {};
+  for (const chunk of chunks) {
+    const query = `
+      {
+        EVM(network: robinhood) {
+          DEXPoolEvents(
+            limit: {count: 2000}
+            orderBy: {descending: Block_Time}
+            where: {
+              PoolEvent: {Pool: {PoolId: {in: ${JSON.stringify(chunk)}}}}
+            }
+          ) {
+            PoolEvent {
+              Pool { PoolId }
+              Liquidity { AmountCurrencyAInUSD }
+            }
           }
         }
       }
-    }
-  `;
-  const data = await bitqueryFetch(query);
-  const map = {};
-  for (const row of data.EVM.DEXPoolEvents || []) {
-    const id = row.PoolEvent.Pool.PoolId.toLowerCase();
-    if (!map[id]) {
-      const eth = parseFloat(row.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
-      map[id] = eth * 2;
+    `;
+    const data = await bitqueryFetch(query);
+    for (const row of data.EVM.DEXPoolEvents || []) {
+      const id = row.PoolEvent.Pool.PoolId.toLowerCase();
+      if (!map[id]) {
+        const eth = parseFloat(row.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
+        map[id] = eth * 2;
+      }
     }
   }
   return map;
@@ -111,7 +121,7 @@ async function getSymbols(tokens) {
     {
       EVM(network: robinhood) {
         Transfers(
-          limit: {count: ${Math.min(tokens.length * 3, 500)}}
+          limit: {count: ${Math.min(tokens.length * 2, 400)}}
           where: {
             Transfer: {
               Sender: {is: "0x0000000000000000000000000000000000000000"}
@@ -140,11 +150,11 @@ async function getSymbols(tokens) {
   return map;
 }
 
-async function loadHistory() {
+async function loadJSON(path, fallback) {
   try {
-    return JSON.parse(await fs.readFile(HISTORY_PATH, "utf-8"));
+    return JSON.parse(await fs.readFile(path, "utf-8"));
   } catch {
-    return [];
+    return fallback;
   }
 }
 
@@ -158,31 +168,42 @@ function closest(entries, target) {
 }
 
 async function main() {
-  console.log("Fetching pools.trade launches...");
-  const launches = await getLaunches();
-  console.log(`Got ${launches.length} unique tokens`);
+  console.log("Loading known tokens...");
+  let known = await loadJSON(KNOWN_PATH, []); // [{token, poolId}]
+  const knownMap = new Map(known.map(k => [k.token, k.poolId]));
 
-  const lpMap = await getLP(launches.map(l => l.poolId));
+  console.log("Fetching new launches...");
+  const newLaunches = await getNewLaunches();
+  console.log(`New launches found: ${newLaunches.length}`);
 
-  let candidates = launches.map(l => ({
-    token: l.token,
-    poolId: l.poolId,
-    lp_usd: lpMap[l.poolId] || 0
-  })).filter(t => t.lp_usd > 20);
-
-  // Also keep previously seen tokens that still have decent LP
-  const history = await loadHistory();
-  const prevTokens = [...new Set(history.map(h => h.token))];
-  const missing = prevTokens.filter(t => !candidates.find(c => c.token === t));
-  if (missing.length) {
-    console.log(`Checking ${missing.length} previously tracked tokens...`);
-    // We don't have their poolId easily, so we skip re-query for now
-    // (can improve later)
+  // Merge new launches into known list
+  for (const l of newLaunches) {
+    if (!knownMap.has(l.token)) {
+      known.push({ token: l.token, poolId: l.poolId });
+      knownMap.set(l.token, l.poolId);
+    }
   }
 
-  candidates.sort((a, b) => b.lp_usd - a.lp_usd);
-  candidates = candidates.slice(0, TOP_N);
+  // Limit how many we query this run (newest first)
+  const toQuery = known.slice(-MAX_POOLS_PER_RUN);
+  const poolIds = toQuery.map(k => k.poolId);
 
+  console.log(`Querying LP for ${poolIds.length} pools...`);
+  const lpMap = await getLP(poolIds);
+
+  let candidates = toQuery
+    .map(k => ({
+      token: k.token,
+      poolId: k.poolId,
+      lp_usd: lpMap[k.poolId] || 0
+    }))
+    .filter(t => t.lp_usd > 15)
+    .sort((a, b) => b.lp_usd - a.lp_usd)
+    .slice(0, TOP_N);
+
+  console.log(`Ranked ${candidates.length} tokens`);
+
+  // symbols
   const symbols = await getSymbols(candidates.map(c => c.token));
   candidates = candidates.map(c => ({
     ...c,
@@ -190,13 +211,16 @@ async function main() {
     name: symbols[c.token]?.name || ""
   }));
 
+  // history for changes
+  let history = await loadJSON(HISTORY_PATH, []);
   const now = Date.now();
   for (const t of candidates) {
     history.push({ token: t.token, ts: now, lp_usd: t.lp_usd });
   }
-  if (history.length > 50000) history.splice(0, history.length - 40000);
+  if (history.length > 60000) history = history.slice(-50000);
 
   await fs.mkdir("data", { recursive: true });
+  await fs.writeFile(KNOWN_PATH, JSON.stringify(known));
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
 
   const DAY = 86400000;
@@ -225,7 +249,7 @@ async function main() {
   });
 
   await fs.writeFile(OUTPUT_PATH, JSON.stringify({ updated: now, tokens: output }, null, 2));
-  console.log(`Done. Tracked ${output.length} pools.trade tokens.`);
+  console.log(`Done. Tracked ${output.length} tokens. Known total: ${known.length}`);
 }
 
 main().catch(e => {
