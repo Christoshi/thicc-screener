@@ -35,7 +35,7 @@ async function bitqueryFetch(query) {
 async function getRecentLaunches() {
   const query = `
     {
-      EVM(network: robinhood, dataset: combined) {
+      EVM(network: robinhood) {
         Events(
           limit: {count: 1000}
           orderBy: {descending: Block_Time}
