@@ -11,8 +11,7 @@ const LAUNCHPADS = [
 const HISTORY_PATH = "data/history.json";
 const KNOWN_PATH = "data/known.json";
 const OUTPUT_PATH = "data.json";
-const TOP_N = 150;
-const MAX_POOLS_PER_RUN = 1200;
+const TOP_N = 100; // start with top 100, increase later
 
 async function bitqueryFetch(query) {
   const res = await fetch("https://streaming.bitquery.io/graphql", {
@@ -82,45 +81,50 @@ async function getRecentLaunches() {
   return [...map.values()];
 }
 
-async function getLP(poolIds) {
-  if (poolIds.length === 0) return {};
-  const chunks = [];
-  for (let i = 0; i < poolIds.length; i += 200) {
-    chunks.push(poolIds.slice(i, i + 200));
-  }
-  const result = {};
-  for (const chunk of chunks) {
-    const query = `
-    {
-      EVM(network: robinhood) {
-        DEXPoolEvents(
-          limit: {count: 500}
-          orderBy: {descending: Block_Time}
-          where: {
-            PoolEvent: {Pool: {PoolId: {in: ${JSON.stringify(chunk)}}}}
+// Get highest-LP pools first (Bitquery ranks them), then we filter to known pools.trade ones
+async function getTopLPPools() {
+  const query = `
+  {
+    EVM(network: robinhood, dataset: realtime) {
+      DEXPoolEvents(
+        where: {
+          PoolEvent: {
+            Liquidity: { AmountCurrencyAInUSD: { gt: 50 } }
           }
-        ) {
-          PoolEvent {
-            Liquidity {
-              AmountCurrencyAInUSD
-              AmountCurrencyBInUSD
-            }
-            Pool { PoolId }
+        }
+        limit: { count: 500 }
+        limitBy: { by: [PoolEvent_Pool_PoolId], count: 1 }
+        orderBy: { descending: PoolEvent_Liquidity_AmountCurrencyAInUSD }
+      ) {
+        PoolEvent {
+          Liquidity {
+            AmountCurrencyAInUSD
+            AmountCurrencyBInUSD
+          }
+          Pool {
+            PoolId
+            CurrencyA { SmartContract Symbol }
+            CurrencyB { SmartContract Symbol }
           }
         }
       }
-    }`;
-    const data = await bitqueryFetch(query);
-    for (const e of data.EVM.DEXPoolEvents) {
-      const id = e.PoolEvent.Pool.PoolId.toLowerCase();
-      if (!result[id]) {
-        const a = Number(e.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
-        const b = Number(e.PoolEvent.Liquidity.AmountCurrencyBInUSD || 0);
-        result[id] = a + b; // ETH side is usually A, but sum is safer
-      }
     }
-  }
-  return result;
+  }`;
+  const data = await bitqueryFetch(query);
+  return data.EVM.DEXPoolEvents.map(e => {
+    const a = Number(e.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
+    const b = Number(e.PoolEvent.Liquidity.AmountCurrencyBInUSD || 0);
+    // For v4 locked pools the ETH leg is what matters; approximate total LP as 2x ETH side when token side USD is 0
+    const lp = b > 0 ? a + b : a * 2;
+    return {
+      poolId: e.PoolEvent.Pool.PoolId.toLowerCase(),
+      lp_usd: lp,
+      currencyA: e.PoolEvent.Pool.CurrencyA?.SmartContract?.toLowerCase(),
+      currencyB: e.PoolEvent.Pool.CurrencyB?.SmartContract?.toLowerCase(),
+      symbolA: e.PoolEvent.Pool.CurrencyA?.Symbol,
+      symbolB: e.PoolEvent.Pool.CurrencyB?.Symbol,
+    };
+  });
 }
 
 async function getSymbols(tokens) {
@@ -129,7 +133,7 @@ async function getSymbols(tokens) {
   {
     EVM(network: robinhood) {
       Transfers(
-        limit: {count: ${tokens.length * 2}}
+        limit: {count: ${Math.min(tokens.length * 3, 300)}}
         where: {
           Transfer: {
             Currency: {SmartContract: {in: ${JSON.stringify(tokens)}}}
@@ -171,55 +175,58 @@ function closest(history, targetTs) {
 async function main() {
   console.log("Loading known tokens...");
   let known = await loadKnown();
-  const knownMap = new Map(known.map(k => [k.token.toLowerCase(), k]));
+  const knownByPool = new Map(known.map(k => [k.poolId.toLowerCase(), k]));
+  const knownByToken = new Map(known.map(k => [k.token.toLowerCase(), k]));
 
   console.log("Fetching new launches...");
   const launches = await getRecentLaunches();
   console.log("New launches found:", launches.length);
   for (const l of launches) {
-    knownMap.set(l.token.toLowerCase(), l);
+    knownByPool.set(l.poolId.toLowerCase(), l);
+    knownByToken.set(l.token.toLowerCase(), l);
   }
-  known = [...knownMap.values()];
+  known = [...knownByToken.values()];
   await fs.mkdir("data", { recursive: true });
   await fs.writeFile(KNOWN_PATH, JSON.stringify(known));
 
-  // Prioritize tokens that already appear in history
+  console.log("Fetching top LP pools from Bitquery...");
+  const topPools = await getTopLPPools();
+  console.log("Got", topPools.length, "high-LP pools");
+
+  // Keep only pools.trade ones
+  const ranked = [];
+  for (const p of topPools) {
+    const knownEntry = knownByPool.get(p.poolId);
+    if (!knownEntry) continue;
+
+    // Determine which side is the token
+    const token = knownEntry.token.toLowerCase();
+    ranked.push({
+      token,
+      poolId: p.poolId,
+      lp_usd: p.lp_usd,
+    });
+    if (ranked.length >= TOP_N) break;
+  }
+
+  console.log("Ranked", ranked.length, "pools.trade tokens");
+
+  const symbols = await getSymbols(ranked.map(t => t.token));
   const history = await loadHistory();
-  const withHistory = new Set(history.map(h => h.token.toLowerCase()));
-  const prioritized = [
-    ...known.filter(k => withHistory.has(k.token.toLowerCase())),
-    ...known.filter(k => !withHistory.has(k.token.toLowerCase())),
-  ];
-  const toQuery = prioritized.slice(0, MAX_POOLS_PER_RUN);
-  console.log("Querying LP for", toQuery.length, "pools...");
-
-  const poolIds = toQuery.map(t => t.poolId);
-  const lpMap = await getLP(poolIds);
-
-  const tokensWithLp = toQuery
-    .map(t => ({
-      token: t.token,
-      poolId: t.poolId,
-      lp_usd: lpMap[t.poolId.toLowerCase()] || 0,
-    }))
-    .filter(t => t.lp_usd > 10)
-    .sort((a, b) => b.lp_usd - a.lp_usd)
-    .slice(0, TOP_N);
-
-  const symbols = await getSymbols(tokensWithLp.map(t => t.token));
-
   const now = Date.now();
-  for (const t of tokensWithLp) {
+
+  for (const t of ranked) {
     history.push({ token: t.token, ts: now, lp_usd: t.lp_usd });
   }
-  // keep history from exploding
   const trimmed = history.filter(h => now - h.ts < 40 * 24 * 60 * 60 * 1000);
   await fs.writeFile(HISTORY_PATH, JSON.stringify(trimmed));
 
   const DAY = 24 * 60 * 60 * 1000;
-  const output = tokensWithLp.map(t => {
+  const output = ranked.map(t => {
     const tokenHist = trimmed.filter(h => h.token === t.token);
-    const genesis = tokenHist.reduce((a, b) => (a.ts < b.ts ? a : b), tokenHist[0]);
+    const genesis = tokenHist.length
+      ? tokenHist.reduce((a, b) => (a.ts < b.ts ? a : b))
+      : { lp_usd: t.lp_usd, ts: now };
     const d1 = closest(tokenHist, now - DAY);
     const d7 = closest(tokenHist, now - 7 * DAY);
     const d30 = closest(tokenHist, now - 30 * DAY);
@@ -228,19 +235,19 @@ async function main() {
       past
         ? {
             usd: +(t.lp_usd - past.lp_usd).toFixed(2),
-            pct: +(((t.lp_usd - past.lp_usd) / past.lp_usd) * 100).toFixed(1),
+            pct: +(((t.lp_usd - past.lp_usd) / (past.lp_usd || 1)) * 100).toFixed(1),
           }
         : { usd: 0, pct: 0 };
 
-    const meta = symbols[t.token.toLowerCase()] || { symbol: "???", name: "" };
+    const meta = symbols[t.token] || { symbol: "???", name: "" };
 
     return {
       token: t.token,
       symbol: meta.symbol,
       name: meta.name,
       current_lp_usd: +t.lp_usd.toFixed(2),
-      genesis_lp_usd: +(genesis?.lp_usd || t.lp_usd).toFixed(2),
-      genesis_ts: genesis?.ts || now,
+      genesis_lp_usd: +genesis.lp_usd.toFixed(2),
+      genesis_ts: genesis.ts,
       change_24h: change(d1),
       change_7d: change(d7),
       change_30d: change(d30),
