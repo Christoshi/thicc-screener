@@ -11,7 +11,7 @@ const LAUNCHPADS = [
 const HISTORY_PATH = "data/history.json";
 const KNOWN_PATH = "data/known.json";
 const OUTPUT_PATH = "data.json";
-const TOP_N = 100; // start with top 100, increase later
+const TOP_N = 100;
 
 async function bitqueryFetch(query) {
   const res = await fetch("https://streaming.bitquery.io/graphql", {
@@ -74,14 +74,13 @@ async function getRecentLaunches() {
     let token = null, poolId = null;
     for (const a of ev.Arguments) {
       if (a.Name === "token" && a.Value?.address) token = a.Value.address.toLowerCase();
-      if (a.Name === "poolId" && a.Value?.hex) poolId = "0x" + a.Value.hex;
+      if (a.Name === "poolId" && a.Value?.hex) poolId = ("0x" + a.Value.hex).toLowerCase();
     }
     if (token && poolId) map.set(token, { token, poolId });
   }
   return [...map.values()];
 }
 
-// Get highest-LP pools first (Bitquery ranks them), then we filter to known pools.trade ones
 async function getTopLPPools() {
   const query = `
   {
@@ -89,7 +88,7 @@ async function getTopLPPools() {
       DEXPoolEvents(
         where: {
           PoolEvent: {
-            Liquidity: { AmountCurrencyAInUSD: { gt: 50 } }
+            Liquidity: { AmountCurrencyAInUSD: { gt: 20 } }
           }
         }
         limit: { count: 500 }
@@ -114,15 +113,12 @@ async function getTopLPPools() {
   return data.EVM.DEXPoolEvents.map(e => {
     const a = Number(e.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
     const b = Number(e.PoolEvent.Liquidity.AmountCurrencyBInUSD || 0);
-    // For v4 locked pools the ETH leg is what matters; approximate total LP as 2x ETH side when token side USD is 0
     const lp = b > 0 ? a + b : a * 2;
     return {
-      poolId: e.PoolEvent.Pool.PoolId.toLowerCase(),
+      poolId: (e.PoolEvent.Pool.PoolId || "").toLowerCase(),
       lp_usd: lp,
       currencyA: e.PoolEvent.Pool.CurrencyA?.SmartContract?.toLowerCase(),
       currencyB: e.PoolEvent.Pool.CurrencyB?.SmartContract?.toLowerCase(),
-      symbolA: e.PoolEvent.Pool.CurrencyA?.Symbol,
-      symbolB: e.PoolEvent.Pool.CurrencyB?.Symbol,
     };
   });
 }
@@ -192,17 +188,21 @@ async function main() {
   console.log("Fetching top LP pools from Bitquery...");
   const topPools = await getTopLPPools();
   console.log("Got", topPools.length, "high-LP pools");
+  console.log("Sample top poolIds:", topPools.slice(0, 5).map(p => p.poolId));
+  console.log("Sample known poolIds:", [...knownByPool.keys()].slice(0, 5));
 
-  // Keep only pools.trade ones
+  let matches = 0;
+  for (const p of topPools.slice(0, 100)) {
+    if (knownByPool.has(p.poolId)) matches++;
+  }
+  console.log("Matches in top 100 high-LP pools:", matches);
+
   const ranked = [];
   for (const p of topPools) {
     const knownEntry = knownByPool.get(p.poolId);
     if (!knownEntry) continue;
-
-    // Determine which side is the token
-    const token = knownEntry.token.toLowerCase();
     ranked.push({
-      token,
+      token: knownEntry.token.toLowerCase(),
       poolId: p.poolId,
       lp_usd: p.lp_usd,
     });
