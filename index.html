@@ -10,6 +10,9 @@
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
     table { font-variant-numeric: tabular-nums; }
+    .copy-btn { opacity: 0.4; transition: opacity 0.15s; }
+    .copy-btn:hover { opacity: 1; }
+    .copy-btn.copied { opacity: 1; color: #4ade80; }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
@@ -42,7 +45,6 @@
   </div>
 
   <script>
-    // For LP / FDV / Volume (big numbers)
     const fmtUsd = (n) => {
       if (n == null || n === "" || Number.isNaN(n)) return "—";
       const x = Number(n);
@@ -53,7 +55,6 @@
       return "$" + x.toFixed(6);
     };
 
-    // For Price only — never use scientific notation
     const fmtPrice = (n) => {
       if (n == null || n === "" || Number.isNaN(n)) return "—";
       const x = Number(n);
@@ -62,7 +63,6 @@
       if (x >= 0.01) return "$" + x.toFixed(4);
       if (x >= 0.0001) return "$" + x.toFixed(6);
       if (x >= 0.000001) return "$" + x.toFixed(8);
-      // extremely small: show up to 10 decimals, strip trailing zeros
       return "$" + x.toFixed(10).replace(/\.?0+$/, "");
     };
 
@@ -74,6 +74,18 @@
       return `<span class="${cls}">${u}${p ? " (" + p + ")" : ""}</span>`;
     };
 
+    function copyCA(addr, btn) {
+      navigator.clipboard.writeText(addr).then(() => {
+        const original = btn.innerHTML;
+        btn.innerHTML = "✓";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.innerHTML = original;
+          btn.classList.remove("copied");
+        }, 1200);
+      });
+    }
+
     async function load() {
       const res = await fetch("/thicc-screener/data.json?t=" + Date.now());
       const data = await res.json();
@@ -83,13 +95,17 @@
       const tbody = document.getElementById("rows");
       tbody.innerHTML = data.tokens
         .map((t, i) => {
-          const short = t.token ? t.token.slice(0, 6) + "…" + t.token.slice(-4) : "";
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
           return `<tr class="hover:bg-neutral-900/80">
             <td class="px-3 py-2 text-neutral-500">${i + 1}</td>
             <td class="px-3 py-2">
-              <div class="font-semibold text-white">${t.symbol || "???"}</div>
-              <div class="text-xs text-neutral-500">${t.name || ""} · ${short}</div>
+              <div class="flex items-center gap-2">
+                <div>
+                  <div class="font-semibold text-white">${t.symbol || "???"}</div>
+                  <div class="text-xs text-neutral-500">${t.name || ""}</div>
+                </div>
+                ${t.token ? `<button class="copy-btn text-xs text-neutral-400 hover:text-white px-1.5 py-0.5 rounded border border-neutral-700" onclick="copyCA('${t.token}', this)" title="Copy CA">copy</button>` : ""}
+              </div>
             </td>
             <td class="px-3 py-2 text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
             <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
