@@ -1,64 +1,44 @@
 {
-  "updated": 1786651518354,
+  "updated": 1786652362260,
   "tokens": [
     {
       "token": "0x459f32cf930aaef71e7a3fe55c6b8fe53e7ba4a1",
       "symbol": "ARH",
       "name": "Agent Robinhood",
-      "current_lp_usd": 14996.6,
+      "current_lp_usd": 15224.87,
       "genesis_lp_usd": 17067.85,
       "genesis_ts": 1786650097190,
       "change_24h": {
-        "usd": -2071.25,
-        "pct": -12.1
+        "usd": -1842.98,
+        "pct": -10.8
       },
       "change_7d": {
-        "usd": -2071.25,
-        "pct": -12.1
+        "usd": -1842.98,
+        "pct": -10.8
       },
       "change_30d": {
-        "usd": -2071.25,
-        "pct": -12.1
+        "usd": -1842.98,
+        "pct": -10.8
       }
     },
     {
       "token": "0x23e699faa3f4e3bda1a2086160ddc8caba66ff8a",
       "symbol": "FOLIO",
       "name": "ZeFolio",
-      "current_lp_usd": 5657.63,
+      "current_lp_usd": 4943.13,
       "genesis_lp_usd": 5102.8,
       "genesis_ts": 1786650097190,
       "change_24h": {
-        "usd": 554.82,
-        "pct": 10.9
+        "usd": -159.67,
+        "pct": -3.1
       },
       "change_7d": {
-        "usd": 554.82,
-        "pct": 10.9
+        "usd": -159.67,
+        "pct": -3.1
       },
       "change_30d": {
-        "usd": 554.82,
-        "pct": 10.9
-      }
-    },
-    {
-      "token": "0x504b6e4c30176dbc3ac76039b46f15b4ef9e1f57",
-      "symbol": "WEN",
-      "name": "Wendy's Co",
-      "current_lp_usd": 1913.07,
-      "genesis_lp_usd": 1913.07,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": -159.67,
+        "pct": -3.1
       }
     },
     {
@@ -85,20 +65,20 @@
       "token": "0x3c432dd15b7c088844bbe31313d1e2e738af35cb",
       "symbol": "ETH",
       "name": "etherium",
-      "current_lp_usd": 853.6,
+      "current_lp_usd": 839.29,
       "genesis_lp_usd": 853.6,
       "genesis_ts": 1786651518354,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": -14.3,
+        "pct": -1.7
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": -14.3,
+        "pct": -1.7
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": -14.3,
+        "pct": -1.7
       }
     },
     {
@@ -107,26 +87,6 @@
       "name": "world licking  cat",
       "current_lp_usd": 694.94,
       "genesis_lp_usd": 694.94,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x479908ac2e5c094f9a0bc0f56f73d97f4290e76c",
-      "symbol": "LDR",
-      "name": "Lodara",
-      "current_lp_usd": 645.77,
-      "genesis_lp_usd": 645.77,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -462,23 +422,23 @@
       }
     },
     {
-      "token": "0x3da20a95ea39a61549c732085bd6c7d7a98c655f",
-      "symbol": "BEER",
-      "name": "Buy a beer",
-      "current_lp_usd": 180.63,
-      "genesis_lp_usd": 180.63,
+      "token": "0x3024d3c2c422e5be27d525ac02f3c2d40c8861ac",
+      "symbol": "CATO",
+      "name": "CATOSHI",
+      "current_lp_usd": 179.82,
+      "genesis_lp_usd": 66.19,
       "genesis_ts": 1786651518354,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 113.63,
+        "pct": 171.7
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 113.63,
+        "pct": 171.7
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 113.63,
+        "pct": 171.7
       }
     },
     {
@@ -602,6 +562,26 @@
       }
     },
     {
+      "token": "0x2a729536983e4a2eac9e790d9c708d5365284232",
+      "symbol": "KONGS",
+      "name": "Robinhood   Kongs",
+      "current_lp_usd": 143.82,
+      "genesis_lp_usd": 143.82,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
       "token": "0xa2a80685c49c2bc83d6d95b95cf25aa7ee7499b3",
       "symbol": "WAME",
       "name": "WAGE ME",
@@ -628,6 +608,26 @@
       "current_lp_usd": 138.31,
       "genesis_lp_usd": 138.31,
       "genesis_ts": 1786651518354,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0xb78d3f27e46258720c4c34475768ca4ed6dc4e6d",
+      "symbol": "RAINBOWFISH",
+      "name": "rainbow  fish",
+      "current_lp_usd": 138.2,
+      "genesis_lp_usd": 138.2,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -682,12 +682,12 @@
       }
     },
     {
-      "token": "0x18c5ae91f678f4e86534fb95a4166c52b95af45d",
-      "symbol": "PEPE",
-      "name": "The Nietzschean Pepe",
-      "current_lp_usd": 128.9,
-      "genesis_lp_usd": 128.9,
-      "genesis_ts": 1786651518354,
+      "token": "0x13fdfabfe2a9fb25376ba3b778b03758e18338f9",
+      "symbol": "INTERN",
+      "name": "INTERN",
+      "current_lp_usd": 123.41,
+      "genesis_lp_usd": 123.41,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -727,26 +727,6 @@
       "name": "RobinDex",
       "current_lp_usd": 105.38,
       "genesis_lp_usd": 105.38,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x3c6090853ae425e0f4d3e4001736eb2fc7b5dff5",
-      "symbol": "CATZ",
-      "name": "Catz in da Hood",
-      "current_lp_usd": 105.17,
-      "genesis_lp_usd": 105.17,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -862,6 +842,26 @@
       }
     },
     {
+      "token": "0xce38318ffbc72c5dd3583f001f6648aabac89690",
+      "symbol": "Shrooms",
+      "name": "Shrooms",
+      "current_lp_usd": 83.94,
+      "genesis_lp_usd": 83.94,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
       "token": "0x8c1f434727c0669a08f2e7a30f19d3ecaef76c57",
       "symbol": "PLUNG",
       "name": "Plungedian",
@@ -922,6 +922,26 @@
       }
     },
     {
+      "token": "0x0a0eb0968df9f460e5c0468b7efcd3f2057d89e6",
+      "symbol": "SBM",
+      "name": "Stonk Broker Machine",
+      "current_lp_usd": 76.01,
+      "genesis_lp_usd": 76.01,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
       "token": "0x2dd19b8971d2a4b7816dd9234b3667cfcb60873e",
       "symbol": "HEPE",
       "name": "Hoodie Pepe",
@@ -967,46 +987,6 @@
       "name": "Shadilay",
       "current_lp_usd": 66.36,
       "genesis_lp_usd": 66.36,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x3024d3c2c422e5be27d525ac02f3c2d40c8861ac",
-      "symbol": "CATO",
-      "name": "CATOSHI",
-      "current_lp_usd": 66.19,
-      "genesis_lp_usd": 66.19,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x1e02cff5020170fd531fe29343d44f2c1318e941",
-      "symbol": "ROBINEIRO",
-      "name": "Robineiro",
-      "current_lp_usd": 64.87,
-      "genesis_lp_usd": 64.87,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -1082,46 +1062,6 @@
       }
     },
     {
-      "token": "0xbe1d2c7f375153f0dcf0e41225c3814f98dccf08",
-      "symbol": "frogwheel",
-      "name": "frogwheel",
-      "current_lp_usd": 59.43,
-      "genesis_lp_usd": 59.43,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xca9d8b1c757ffc983c867d6793a2f5cf752ea06f",
-      "symbol": "SMUGGLE",
-      "name": "The Smuggle",
-      "current_lp_usd": 58.92,
-      "genesis_lp_usd": 58.92,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
       "token": "0xbccd278200c0b39681a9a1c27a2d64eeb9d145ef",
       "symbol": "QUARTER",
       "name": "STAKED BET",
@@ -1148,6 +1088,26 @@
       "current_lp_usd": 56.33,
       "genesis_lp_usd": 56.33,
       "genesis_ts": 1786651518354,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0x05c8a0dedfbac5bab22fe9a0148a38baad7f9937",
+      "symbol": "DOGE",
+      "name": "Doge in Hood",
+      "current_lp_usd": 55.85,
+      "genesis_lp_usd": 55.85,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1262,12 +1222,12 @@
       }
     },
     {
-      "token": "0x85fe06a3309839c2ffd0319b2e4bdcbfdae007a9",
-      "symbol": "TASER",
-      "name": "Taser for Trump",
-      "current_lp_usd": 45.53,
-      "genesis_lp_usd": 45.53,
-      "genesis_ts": 1786651518354,
+      "token": "0x6a778f1612bbf5f92c94809f8f759b2b19019c14",
+      "symbol": "HTZ",
+      "name": "HERTZ GLOBAL HOLDINGS INC",
+      "current_lp_usd": 47.53,
+      "genesis_lp_usd": 47.53,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1282,12 +1242,12 @@
       }
     },
     {
-      "token": "0xcd16f33b979a3eeb8ee1d25eaa7f10ea82157de5",
-      "symbol": "VENUSCOIN",
-      "name": "VENUSCOIN",
-      "current_lp_usd": 44.68,
-      "genesis_lp_usd": 44.68,
-      "genesis_ts": 1786651518354,
+      "token": "0xc0a3f2226288b0634df86fe7c4a25194840870bd",
+      "symbol": "BAGVLADD",
+      "name": "Bag Vladd",
+      "current_lp_usd": 47.27,
+      "genesis_lp_usd": 47.27,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1302,52 +1262,12 @@
       }
     },
     {
-      "token": "0x1c7a67d9d2dd6b0f9aeba436cbdc5afd1dc6d774",
-      "symbol": "INTERN",
-      "name": "INTERN",
-      "current_lp_usd": 44.42,
-      "genesis_lp_usd": 44.42,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xf7f8fd17be98f692b9f15e7aa4b5e9fce5c1dd92",
-      "symbol": "BAGS6900",
-      "name": "BAGS6900",
-      "current_lp_usd": 44.35,
-      "genesis_lp_usd": 44.35,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x38c425c8cb7f9252eb4c34bb704a6312feeb7f05",
-      "symbol": "G1-024",
-      "name": "G1-024",
-      "current_lp_usd": 43.88,
-      "genesis_lp_usd": 43.88,
-      "genesis_ts": 1786651518354,
+      "token": "0x9a1fb4eac3201d11c933a1b8cfae0dad5f1732c8",
+      "symbol": "MYRO",
+      "name": "Myro Wif Hood",
+      "current_lp_usd": 45.99,
+      "genesis_lp_usd": 45.99,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1367,26 +1287,6 @@
       "name": "NO PHOTOS PLEASE",
       "current_lp_usd": 42.15,
       "genesis_lp_usd": 42.15,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xde6b27b735c44a7328352db816e3558daf961f9e",
-      "symbol": "LICKINGCAT",
-      "name": "world licking cat",
-      "current_lp_usd": 41.86,
-      "genesis_lp_usd": 41.86,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -1422,12 +1322,12 @@
       }
     },
     {
-      "token": "0xd8876f841bd2e22fb3892b08ff22e509debf5f45",
-      "symbol": "INTERN",
-      "name": "INTERN",
-      "current_lp_usd": 40.31,
-      "genesis_lp_usd": 40.31,
-      "genesis_ts": 1786651518354,
+      "token": "0xef48e17220bb3f802966f7a926478788f4f21ef2",
+      "symbol": "FOG",
+      "name": "Fogger",
+      "current_lp_usd": 39.44,
+      "genesis_lp_usd": 39.44,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1462,51 +1362,31 @@
       }
     },
     {
+      "token": "0x887e14ec46c071897b63201fdef12198c69377e6",
+      "symbol": "GAMECOIN",
+      "name": "GAMECOIN",
+      "current_lp_usd": 35.88,
+      "genesis_lp_usd": 35.88,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
       "token": "0x0dab27d40539008e2a076baee5bd96c02734709d",
       "symbol": "Dungeon",
       "name": "Dungeon Arena🥔",
       "current_lp_usd": 35.87,
       "genesis_lp_usd": 35.87,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x2b1c5344cea439743656deace3cd7e22fd87b8e2",
-      "symbol": "JACKET",
-      "name": "Leather Jacket",
-      "current_lp_usd": 34.18,
-      "genesis_lp_usd": 34.18,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x9357a29dcba84b5efd7e225534211504bee233db",
-      "symbol": "camrys",
-      "name": "toyota camrys",
-      "current_lp_usd": 34.01,
-      "genesis_lp_usd": 34.01,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -1542,26 +1422,6 @@
       }
     },
     {
-      "token": "0x2cebd396b6c3d6186de784bf6e53dec0c6c85d44",
-      "symbol": "JACKET",
-      "name": "JACKET",
-      "current_lp_usd": 33.8,
-      "genesis_lp_usd": 33.8,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
       "token": "0x916c8934ca14fc15aa04ee9a9522a28496f16431",
       "symbol": "Oggie",
       "name": "Oggie",
@@ -1582,12 +1442,12 @@
       }
     },
     {
-      "token": "0xbfd808916a58f48f9c3dff15a6e04879830be8be",
-      "symbol": "RIBBIT",
-      "name": "Ribbit The Frog",
-      "current_lp_usd": 31.56,
-      "genesis_lp_usd": 31.56,
-      "genesis_ts": 1786651518354,
+      "token": "0x4b3e7364a88febea8e6cd4dacbb4a1758ab9945b",
+      "symbol": "RAINBOWFISH",
+      "name": "rainbow fish",
+      "current_lp_usd": 32.15,
+      "genesis_lp_usd": 32.15,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1602,12 +1462,32 @@
       }
     },
     {
-      "token": "0xb22b9d93b16c110470d4a458f1d2b34ef2539a69",
-      "symbol": "Monkey",
-      "name": "Monkey",
-      "current_lp_usd": 30.98,
-      "genesis_lp_usd": 30.98,
-      "genesis_ts": 1786651518354,
+      "token": "0x3bd238478329672afc648364e17212aacc2bc37f",
+      "symbol": "PANCAKESQUAD",
+      "name": "Pancake squad",
+      "current_lp_usd": 30.89,
+      "genesis_lp_usd": 30.89,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0x8969f0898979fcb4ff61b914b4623d55ec4af9c1",
+      "symbol": "ZUCC",
+      "name": "ZUCC",
+      "current_lp_usd": 29.51,
+      "genesis_lp_usd": 29.51,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1642,32 +1522,12 @@
       }
     },
     {
-      "token": "0xed81016d2b688492458bf26b2d5e62bdeed4c9a4",
-      "symbol": "YUYHU",
-      "name": "Yuyhu Seree",
-      "current_lp_usd": 28.56,
-      "genesis_lp_usd": 28.56,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x48d8fcb21babe9a128a94f5b1a03fdc23fab97cd",
-      "symbol": "HOODIBA",
-      "name": "$HOODIBA",
-      "current_lp_usd": 28.01,
-      "genesis_lp_usd": 28.01,
-      "genesis_ts": 1786651518354,
+      "token": "0xce10bb0d401181cdec826a693e343ffe421e60d3",
+      "symbol": "MSFT",
+      "name": "Microsoft",
+      "current_lp_usd": 28.78,
+      "genesis_lp_usd": 28.78,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1762,26 +1622,6 @@
       }
     },
     {
-      "token": "0xdbeab0defea5218e4c2d4b1ffa111a11e0381607",
-      "symbol": "TENDIES",
-      "name": "TENDIES",
-      "current_lp_usd": 24.44,
-      "genesis_lp_usd": 24.44,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
       "token": "0xe755ec368d3989e83c634f0387c9713c8d3b8121",
       "symbol": "RIGMOTHY",
       "name": "Rigmothy The Raccoon",
@@ -1807,26 +1647,6 @@
       "name": "peanutkun",
       "current_lp_usd": 23.94,
       "genesis_lp_usd": 23.94,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x95c0a51774b867cc9e70befbf8ada9fdac9ae654",
-      "symbol": "UNICRONG",
-      "name": "UNlCRONG",
-      "current_lp_usd": 23.85,
-      "genesis_lp_usd": 23.85,
       "genesis_ts": 1786651518354,
       "change_24h": {
         "usd": 0,
@@ -1882,6 +1702,26 @@
       }
     },
     {
+      "token": "0x5987488b2ef995bfb69f444ec00dab90e252e6a4",
+      "symbol": "INVEST",
+      "name": "Cat In Vest",
+      "current_lp_usd": 23.15,
+      "genesis_lp_usd": 23.15,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
       "token": "0xc8de1be72bd5c952ece535f0fdd72db51444492f",
       "symbol": "Oggie",
       "name": "Oggie",
@@ -1902,12 +1742,12 @@
       }
     },
     {
-      "token": "0x8d6df62697c04a6acf8d5d9fd9bad360d3a03e25",
+      "token": "0x01ad3fb04a4aaefb344efe2e342fd1654d3930ba",
       "symbol": "INTERN",
       "name": "INTERN",
-      "current_lp_usd": 22.71,
-      "genesis_lp_usd": 22.71,
-      "genesis_ts": 1786651518354,
+      "current_lp_usd": 22.63,
+      "genesis_lp_usd": 22.63,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1922,12 +1762,12 @@
       }
     },
     {
-      "token": "0xd2b8920eff07900656460581a756bd62a3dc8b95",
-      "symbol": "RATIO",
-      "name": "RATIO",
-      "current_lp_usd": 21.71,
-      "genesis_lp_usd": 21.71,
-      "genesis_ts": 1786651518354,
+      "token": "0x08dd304a2b2ec55b119553a57ec30242423b38b3",
+      "symbol": "INTERN",
+      "name": "INTERN",
+      "current_lp_usd": 21.13,
+      "genesis_lp_usd": 21.13,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
@@ -1982,12 +1822,72 @@
       }
     },
     {
-      "token": "0x6ec6effb9244ccdf484e1431f21a680a913008c1",
-      "symbol": "KARP",
-      "name": "Daddy Karp",
-      "current_lp_usd": 19.04,
-      "genesis_lp_usd": 19.04,
-      "genesis_ts": 1786651518354,
+      "token": "0xa57bbb2c55261620dfea3cdd7e47433bf77535e1",
+      "symbol": "MSLIFE",
+      "name": "Metro Social Life",
+      "current_lp_usd": 20.49,
+      "genesis_lp_usd": 20.49,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0xe3fb0e172076d3f6f695d199a68b401b24670cd2",
+      "symbol": "INTERN",
+      "name": "INTERN",
+      "current_lp_usd": 20.35,
+      "genesis_lp_usd": 20.35,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0x565e35f3c0c6ad2b1946e17b9566194c9b4a207b",
+      "symbol": "INTERN",
+      "name": "INTERN",
+      "current_lp_usd": 20.27,
+      "genesis_lp_usd": 20.27,
+      "genesis_ts": 1786652362260,
+      "change_24h": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_7d": {
+        "usd": 0,
+        "pct": 0
+      },
+      "change_30d": {
+        "usd": 0,
+        "pct": 0
+      }
+    },
+    {
+      "token": "0xda8e0ceb493541644bc0341099f0c650983e7cf9",
+      "symbol": "APPLECAT",
+      "name": "Apple Cat",
+      "current_lp_usd": 19.48,
+      "genesis_lp_usd": 19.48,
+      "genesis_ts": 1786652362260,
       "change_24h": {
         "usd": 0,
         "pct": 0
