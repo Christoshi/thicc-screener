@@ -11,7 +11,8 @@ const LAUNCHPADS = [
 const HISTORY_PATH = "data/history.json";
 const KNOWN_PATH = "data/known.json";
 const OUTPUT_PATH = "data.json";
-const TOP_N = 100;
+const TOP_N = 1000;          // top 1000 by LP
+const CHUNK_SIZE = 150;
 
 async function bitqueryFetch(query) {
   const res = await fetch("https://streaming.bitquery.io/graphql", {
@@ -81,46 +82,41 @@ async function getRecentLaunches() {
   return [...map.values()];
 }
 
-async function getTopLPPools() {
-  const query = `
-  {
-    EVM(network: robinhood, dataset: realtime) {
-      DEXPoolEvents(
-        where: {
-          PoolEvent: {
-            Liquidity: { AmountCurrencyAInUSD: { gt: 20 } }
+async function getLPForPools(poolIds) {
+  const result = {};
+  for (let i = 0; i < poolIds.length; i += CHUNK_SIZE) {
+    const chunk = poolIds.slice(i, i + CHUNK_SIZE);
+    console.log(`  querying chunk ${Math.floor(i / CHUNK_SIZE) + 1} (${chunk.length} pools)...`);
+    const query = `
+    {
+      EVM(network: robinhood) {
+        DEXPoolEvents(
+          limit: {count: ${CHUNK_SIZE * 2}}
+          orderBy: {descending: Block_Time}
+          where: {
+            PoolEvent: {Pool: {PoolId: {in: ${JSON.stringify(chunk)}}}}
           }
-        }
-        limit: { count: 500 }
-        limitBy: { by: [PoolEvent_Pool_PoolId], count: 1 }
-        orderBy: { descending: PoolEvent_Liquidity_AmountCurrencyAInUSD }
-      ) {
-        PoolEvent {
-          Liquidity {
-            AmountCurrencyAInUSD
-            AmountCurrencyBInUSD
-          }
-          Pool {
-            PoolId
-            CurrencyA { SmartContract Symbol }
-            CurrencyB { SmartContract Symbol }
+        ) {
+          PoolEvent {
+            Liquidity {
+              AmountCurrencyAInUSD
+              AmountCurrencyBInUSD
+            }
+            Pool { PoolId }
           }
         }
       }
+    }`;
+    const data = await bitqueryFetch(query);
+    for (const e of data.EVM.DEXPoolEvents) {
+      const id = (e.PoolEvent.Pool.PoolId || "").toLowerCase();
+      if (result[id]) continue;
+      const a = Number(e.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
+      const b = Number(e.PoolEvent.Liquidity.AmountCurrencyBInUSD || 0);
+      result[id] = b > 0 ? a + b : a * 2;
     }
-  }`;
-  const data = await bitqueryFetch(query);
-  return data.EVM.DEXPoolEvents.map(e => {
-    const a = Number(e.PoolEvent.Liquidity.AmountCurrencyAInUSD || 0);
-    const b = Number(e.PoolEvent.Liquidity.AmountCurrencyBInUSD || 0);
-    const lp = b > 0 ? a + b : a * 2;
-    return {
-      poolId: (e.PoolEvent.Pool.PoolId || "").toLowerCase(),
-      lp_usd: lp,
-      currencyA: e.PoolEvent.Pool.CurrencyA?.SmartContract?.toLowerCase(),
-      currencyB: e.PoolEvent.Pool.CurrencyB?.SmartContract?.toLowerCase(),
-    };
-  });
+  }
+  return result;
 }
 
 async function getSymbols(tokens) {
@@ -129,7 +125,7 @@ async function getSymbols(tokens) {
   {
     EVM(network: robinhood) {
       Transfers(
-        limit: {count: ${Math.min(tokens.length * 3, 300)}}
+        limit: {count: ${Math.min(tokens.length * 3, 500)}}
         where: {
           Transfer: {
             Currency: {SmartContract: {in: ${JSON.stringify(tokens)}}}
@@ -171,45 +167,39 @@ function closest(history, targetTs) {
 async function main() {
   console.log("Loading known tokens...");
   let known = await loadKnown();
-  const knownByPool = new Map(known.map(k => [k.poolId.toLowerCase(), k]));
   const knownByToken = new Map(known.map(k => [k.token.toLowerCase(), k]));
 
   console.log("Fetching new launches...");
   const launches = await getRecentLaunches();
   console.log("New launches found:", launches.length);
   for (const l of launches) {
-    knownByPool.set(l.poolId.toLowerCase(), l);
     knownByToken.set(l.token.toLowerCase(), l);
   }
   known = [...knownByToken.values()];
   await fs.mkdir("data", { recursive: true });
   await fs.writeFile(KNOWN_PATH, JSON.stringify(known));
+  console.log("Known total (all pools.trade):", known.length);
 
-  console.log("Fetching top LP pools from Bitquery...");
-  const topPools = await getTopLPPools();
-  console.log("Got", topPools.length, "high-LP pools");
-  console.log("Sample top poolIds:", topPools.slice(0, 5).map(p => p.poolId));
-  console.log("Sample known poolIds:", [...knownByPool.keys()].slice(0, 5));
+  // Query LP for ALL pools.trade pools
+  const poolIds = known.map(k => k.poolId.toLowerCase());
+  console.log("Querying LP for ALL", poolIds.length, "pools.trade pools...");
+  const lpMap = await getLPForPools(poolIds);
 
-  let matches = 0;
-  for (const p of topPools.slice(0, 100)) {
-    if (knownByPool.has(p.poolId)) matches++;
+  const ranked = known
+    .map(k => ({
+      token: k.token.toLowerCase(),
+      poolId: k.poolId.toLowerCase(),
+      lp_usd: lpMap[k.poolId.toLowerCase()] || 0,
+    }))
+    .filter(t => t.lp_usd > 5)
+    .sort((a, b) => b.lp_usd - a.lp_usd)
+    .slice(0, TOP_N);
+
+  console.log("Ranked top", ranked.length, "by LP");
+  if (ranked.length) {
+    console.log("Highest LP:", ranked[0].lp_usd.toFixed(0));
+    console.log("Top 5:", ranked.slice(0, 5).map(r => r.lp_usd.toFixed(0)));
   }
-  console.log("Matches in top 100 high-LP pools:", matches);
-
-  const ranked = [];
-  for (const p of topPools) {
-    const knownEntry = knownByPool.get(p.poolId);
-    if (!knownEntry) continue;
-    ranked.push({
-      token: knownEntry.token.toLowerCase(),
-      poolId: p.poolId,
-      lp_usd: p.lp_usd,
-    });
-    if (ranked.length >= TOP_N) break;
-  }
-
-  console.log("Ranked", ranked.length, "pools.trade tokens");
 
   const symbols = await getSymbols(ranked.map(t => t.token));
   const history = await loadHistory();
