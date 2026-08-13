@@ -26,7 +26,7 @@ async function bitqueryFetch(query) {
   return json.data;
 }
 
-async function getLaunchesInWindow(since, until, label) {
+async function getLaunches(since, label) {
   console.log(`Fetching ${label}...`);
   const query = `
     {
@@ -37,12 +37,7 @@ async function getLaunchesInWindow(since, until, label) {
           where: {
             LogHeader: {Address: {in: ${JSON.stringify(LAUNCHPADS)}}}
             Log: {Signature: {Name: {is: "TokenLaunched"}}}
-            Block: {
-              Time: {
-                since: "${since}"
-                ${until ? `until: "${until}"` : ""}
-              }
-            }
+            Block: { Time: { since: "${since}" } }
           }
         ) {
           Arguments {
@@ -76,12 +71,12 @@ async function getLaunchesInWindow(since, until, label) {
 }
 
 async function main() {
-  // Time windows (adjust if needed)
+  // Progressive backfill – each run goes further back
   const windows = [
-    { since: "2026-08-01T00:00:00Z", until: null, label: "Aug 1 → now" },
-    { since: "2026-07-20T00:00:00Z", until: "2026-08-01T00:00:00Z", label: "Jul 20 → Aug 1" },
-    { since: "2026-07-10T00:00:00Z", until: "2026-07-20T00:00:00Z", label: "Jul 10 → Jul 20" },
-    { since: "2026-07-01T00:00:00Z", until: "2026-07-10T00:00:00Z", label: "Jul 1 → Jul 10" },
+    { since: "2026-08-05T00:00:00Z", label: "Aug 5 → now" },
+    { since: "2026-07-25T00:00:00Z", label: "Jul 25 → now" },
+    { since: "2026-07-15T00:00:00Z", label: "Jul 15 → now" },
+    { since: "2026-07-01T00:00:00Z", label: "Jul 1 → now" },
   ];
 
   let known = [];
@@ -92,15 +87,14 @@ async function main() {
   const map = new Map(known.map(k => [k.token, k.poolId]));
 
   for (const w of windows) {
-    const launches = await getLaunchesInWindow(w.since, w.until, w.label);
+    const launches = await getLaunches(w.since, w.label);
     for (const l of launches) {
       if (!map.has(l.token)) {
         map.set(l.token, l.poolId);
         known.push(l);
       }
     }
-    // small pause to be nice to free tier
-    await new Promise(r => setTimeout(r, 1500));
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   await fs.mkdir("data", { recursive: true });
