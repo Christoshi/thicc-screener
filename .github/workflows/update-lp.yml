@@ -1,0 +1,34 @@
+name: Update THICC Screener LP Data
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes
+  workflow_dispatch:          # lets you trigger it manually too
+
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run fetch script
+        env:
+          BITQUERY_API_KEY: ${{ secrets.BITQUERY_API_KEY }}
+        run: node fetch-lp.js
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json data/history.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update LP data"
+          git push
