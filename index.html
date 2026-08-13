@@ -37,31 +37,51 @@
   <script>
     function fmt(n) {
       if (n == null) return "—";
-      if (n >= 1e6) return "$" + (n/1e6).toFixed(2) + "M";
-      if (n >= 1e3) return "$" + (n/1e3).toFixed(1) + "K";
+      if (n >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+      if (n >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
       return "$" + n.toFixed(0);
     }
 
     function changeCell(c) {
-      if (!c || c.pct === 0) return `<span class="text-gray-500">—</span>`;
+      if (!c || c.pct === 0) return '<span class="text-gray-500">—</span>';
       const color = c.pct > 0 ? "text-lime-400" : "text-red-400";
       const sign = c.pct > 0 ? "+" : "";
       return `<span class="${color}">${sign}${c.pct}%</span>`;
     }
 
     async function load() {
-      const res = await fetch("./data.json?t=" + Date.now());
-      const data = await res.json();
+      try {
+        const res = await fetch("./data.json?t=" + Date.now());
+        const data = await res.json();
 
-      document.getElementById("updated").textContent = 
-        "Updated " + new Date(data.updated).toLocaleString();
+        document.getElementById("updated").textContent =
+          "Updated " + new Date(data.updated).toLocaleString();
 
-      const tbody = document.getElementById("tbody");
-      tbody.innerHTML = data.tokens.map((t, i) => `
-        <tr class="hover:bg-gray-900/60">
-          <td class="px-4 py-3 text-gray-500">${i+1}</td>
-          <td class="px-4 py-3">
-            <div class="font-medium">${t.symbol || "???"}</div>
-            <div class="text-xs text-gray-500 font-mono">${t.token.slice(0,6)}...${t.token.slice(-4)}</div>
-          </td>
-          <td class="px-4 py-3 text
+        const tbody = document.getElementById("tbody");
+        tbody.innerHTML = data.tokens.map((t, i) => `
+          <tr class="hover:bg-gray-900/60">
+            <td class="px-4 py-3 text-gray-500">${i + 1}</td>
+            <td class="px-4 py-3">
+              <div class="font-medium">${t.symbol || "???"}</div>
+              <div class="text-xs text-gray-500 font-mono">${t.token.slice(0, 6)}...${t.token.slice(-4)}</div>
+            </td>
+            <td class="px-4 py-3 text-right font-medium text-lime-400">${fmt(t.current_lp_usd)}</td>
+            <td class="px-4 py-3 text-right">${fmt(t.genesis_lp_usd)}</td>
+            <td class="px-4 py-3 text-right">${changeCell(t.change_24h)}</td>
+            <td class="px-4 py-3 text-right">${changeCell(t.change_7d)}</td>
+            <td class="px-4 py-3">
+              <a href="https://pools.trade/t/${t.token}" target="_blank" class="text-lime-400 hover:underline text-xs">Trade</a>
+            </td>
+          </tr>
+        `).join("");
+      } catch (err) {
+        console.error(err);
+        document.getElementById("tbody").innerHTML =
+          '<tr><td colspan="7" class="px-4 py-8 text-center text-red-400">Failed to load data</td></tr>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>
