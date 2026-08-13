@@ -1,964 +1,304 @@
 {
-  "updated": 1786653655691,
+  "updated": 1786654145916,
   "tokens": [
+    {
+      "token": "0x776bf449979dcf2a41dc8247beb91aa117f9f917",
+      "symbol": "ASCII",
+      "name": "ASCII",
+      "current_lp_usd": 97421.61,
+      "genesis_lp_usd": 94,
+      "genesis_ts": 1786653248037,
+      "change_24h": {
+        "usd": 97327.61,
+        "pct": 103542.4
+      },
+      "change_7d": {
+        "usd": 97327.61,
+        "pct": 103542.4
+      },
+      "change_30d": {
+        "usd": 97327.61,
+        "pct": 103542.4
+      }
+    },
+    {
+      "token": "0x9ada227c0fccf87b08c86b6aaf6466291bf07be3",
+      "symbol": "CG",
+      "name": "cybergnosis",
+      "current_lp_usd": 76220.67,
+      "genesis_lp_usd": 134.59,
+      "genesis_ts": 1786650097190,
+      "change_24h": {
+        "usd": 76086.08,
+        "pct": 56533.6
+      },
+      "change_7d": {
+        "usd": 76086.08,
+        "pct": 56533.6
+      },
+      "change_30d": {
+        "usd": 76086.08,
+        "pct": 56533.6
+      }
+    },
     {
       "token": "0xa74f17ad407df07a9fff1db6496b2169e45784a7",
       "symbol": "WFNT",
       "name": "Walnut Furnishings Corporation",
-      "current_lp_usd": 15485.59,
+      "current_lp_usd": 74354.32,
       "genesis_lp_usd": 51727.89,
       "genesis_ts": 1786649527209,
       "change_24h": {
-        "usd": -36242.31,
-        "pct": -70.1
+        "usd": 22626.42,
+        "pct": 43.7
       },
       "change_7d": {
-        "usd": -36242.31,
-        "pct": -70.1
+        "usd": 22626.42,
+        "pct": 43.7
       },
       "change_30d": {
-        "usd": -36242.31,
-        "pct": -70.1
-      }
-    },
-    {
-      "token": "0x2cac1ce6fe2c2ce8b7f5337f4ec57b3b13d97c9e",
-      "symbol": "PTT",
-      "name": "Pokéchess",
-      "current_lp_usd": 9942.86,
-      "genesis_lp_usd": 9942.86,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 22626.42,
+        "pct": 43.7
       }
     },
     {
       "token": "0xfa416c98d99d87ab63deeacaafd9da9214fdad2c",
       "symbol": "OMY",
       "name": "Omex Finance",
-      "current_lp_usd": 8865.93,
+      "current_lp_usd": 69920.56,
       "genesis_lp_usd": 49861.95,
       "genesis_ts": 1786649527209,
       "change_24h": {
-        "usd": -40996.02,
-        "pct": -82.2
+        "usd": 20058.62,
+        "pct": 40.2
       },
       "change_7d": {
-        "usd": -40996.02,
-        "pct": -82.2
+        "usd": 20058.62,
+        "pct": 40.2
       },
       "change_30d": {
-        "usd": -40996.02,
-        "pct": -82.2
-      }
-    },
-    {
-      "token": "0x459f32cf930aaef71e7a3fe55c6b8fe53e7ba4a1",
-      "symbol": "ARH",
-      "name": "Agent Robinhood",
-      "current_lp_usd": 7435.22,
-      "genesis_lp_usd": 17067.85,
-      "genesis_ts": 1786650097190,
-      "change_24h": {
-        "usd": -9632.63,
-        "pct": -56.4
-      },
-      "change_7d": {
-        "usd": -9632.63,
-        "pct": -56.4
-      },
-      "change_30d": {
-        "usd": -9632.63,
-        "pct": -56.4
-      }
-    },
-    {
-      "token": "0xc45717f64153b74af5c025632b847a7c79d7743e",
-      "symbol": "FRONGJAK",
-      "name": "Frongjak",
-      "current_lp_usd": 7350.73,
-      "genesis_lp_usd": 14372.03,
-      "genesis_ts": 1786649527209,
-      "change_24h": {
-        "usd": -7021.29,
-        "pct": -48.9
-      },
-      "change_7d": {
-        "usd": -7021.29,
-        "pct": -48.9
-      },
-      "change_30d": {
-        "usd": -7021.29,
-        "pct": -48.9
-      }
-    },
-    {
-      "token": "0xf765bcd16a234913b3f54014a51259fafa0d1f7b",
-      "symbol": "LEASH",
-      "name": "Doge Killer",
-      "current_lp_usd": 2481.17,
-      "genesis_lp_usd": 6843.68,
-      "genesis_ts": 1786649527209,
-      "change_24h": {
-        "usd": -4362.51,
-        "pct": -63.7
-      },
-      "change_7d": {
-        "usd": -4362.51,
-        "pct": -63.7
-      },
-      "change_30d": {
-        "usd": -4362.51,
-        "pct": -63.7
-      }
-    },
-    {
-      "token": "0x23e699faa3f4e3bda1a2086160ddc8caba66ff8a",
-      "symbol": "FOLIO",
-      "name": "ZeFolio",
-      "current_lp_usd": 2463.94,
-      "genesis_lp_usd": 5102.8,
-      "genesis_ts": 1786650097190,
-      "change_24h": {
-        "usd": -2638.86,
-        "pct": -51.7
-      },
-      "change_7d": {
-        "usd": -2638.86,
-        "pct": -51.7
-      },
-      "change_30d": {
-        "usd": -2638.86,
-        "pct": -51.7
-      }
-    },
-    {
-      "token": "0x3950cc7eff8192b7fe3bc01e5bbead2d7d29d60f",
-      "symbol": "CORE",
-      "name": "CoreHood",
-      "current_lp_usd": 1848.23,
-      "genesis_lp_usd": 3828.24,
-      "genesis_ts": 1786650097190,
-      "change_24h": {
-        "usd": -1980.01,
-        "pct": -51.7
-      },
-      "change_7d": {
-        "usd": -1980.01,
-        "pct": -51.7
-      },
-      "change_30d": {
-        "usd": -1980.01,
-        "pct": -51.7
-      }
-    },
-    {
-      "token": "0x6080708e8d40b13403ae536532b1724cab0ee81c",
-      "symbol": "WFNT",
-      "name": "Walnut Furnishings Corporation",
-      "current_lp_usd": 981.58,
-      "genesis_lp_usd": 3085.87,
-      "genesis_ts": 1786649527209,
-      "change_24h": {
-        "usd": -2104.29,
-        "pct": -68.2
-      },
-      "change_7d": {
-        "usd": -2104.29,
-        "pct": -68.2
-      },
-      "change_30d": {
-        "usd": -2104.29,
-        "pct": -68.2
-      }
-    },
-    {
-      "token": "0x16a19df486d8a61c5bb1bf659c68c0659716c43f",
-      "symbol": "MUMU",
-      "name": "Mumu the Cat",
-      "current_lp_usd": 917.84,
-      "genesis_lp_usd": 3312.41,
-      "genesis_ts": 1786650097190,
-      "change_24h": {
-        "usd": -2394.57,
-        "pct": -72.3
-      },
-      "change_7d": {
-        "usd": -2394.57,
-        "pct": -72.3
-      },
-      "change_30d": {
-        "usd": -2394.57,
-        "pct": -72.3
-      }
-    },
-    {
-      "token": "0x2fb3b2fcd1c34489f8cbd67bf5b7f2f9949e5fa2",
-      "symbol": "RHT",
-      "name": "Robinhood Stock Tokens",
-      "current_lp_usd": 749.01,
-      "genesis_lp_usd": 749.01,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xfe61a50d225236b6b3a2fb859820feada635f7a8",
-      "symbol": "STONKFUN",
-      "name": "Stonk Fun",
-      "current_lp_usd": 715.12,
-      "genesis_lp_usd": 715.12,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x35d1c9d6c6affe75fe9011c87bbea2616862abdd",
-      "symbol": "Manifest",
-      "name": "Manifest",
-      "current_lp_usd": 514.42,
-      "genesis_lp_usd": 599.53,
-      "genesis_ts": 1786649527209,
-      "change_24h": {
-        "usd": -85.11,
-        "pct": -14.2
-      },
-      "change_7d": {
-        "usd": -85.11,
-        "pct": -14.2
-      },
-      "change_30d": {
-        "usd": -85.11,
-        "pct": -14.2
-      }
-    },
-    {
-      "token": "0x90ea7b2791de9ad23a20b0dc7396e4009985e6d7",
-      "symbol": "BLACK",
-      "name": "The Black Bull",
-      "current_lp_usd": 374.45,
-      "genesis_lp_usd": 624.33,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": -249.88,
-        "pct": -40
-      },
-      "change_7d": {
-        "usd": -249.88,
-        "pct": -40
-      },
-      "change_30d": {
-        "usd": -249.88,
-        "pct": -40
-      }
-    },
-    {
-      "token": "0x779aec92d3ea09236ae01408a3997897f63a8877",
-      "symbol": "SATOSHI",
-      "name": "Sathosi in Hood",
-      "current_lp_usd": 305.18,
-      "genesis_lp_usd": 305.18,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x0b4bd9ce2fcea4c8866ed97672c950bf3116b5e2",
-      "symbol": "GROX",
-      "name": "GrOX",
-      "current_lp_usd": 233.06,
-      "genesis_lp_usd": 233.06,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x4554d5b210443b6795c99653d5b861399e20aa1b",
-      "symbol": "SFRONG",
-      "name": "SplitsFrong",
-      "current_lp_usd": 221.2,
-      "genesis_lp_usd": 221.2,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x37c1c6bb64eabee6cde919f8d226e2f0f9d5e364",
-      "symbol": "UNIBEAR",
-      "name": "Momota",
-      "current_lp_usd": 201.54,
-      "genesis_lp_usd": 215.77,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": -14.23,
-        "pct": -6.6
-      },
-      "change_7d": {
-        "usd": -14.23,
-        "pct": -6.6
-      },
-      "change_30d": {
-        "usd": -14.23,
-        "pct": -6.6
-      }
-    },
-    {
-      "token": "0xb224753c84a2e80616dc32205ddb4f2866212788",
-      "symbol": " ",
-      "name": " ",
-      "current_lp_usd": 187.09,
-      "genesis_lp_usd": 187.09,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 20058.62,
+        "pct": 40.2
       }
     },
     {
       "token": "0x9564f5033deaf640bce6c699aca822779897a0df",
       "symbol": "NVDA",
       "name": "nvda",
-      "current_lp_usd": 151.7,
+      "current_lp_usd": 60027.37,
       "genesis_lp_usd": 302.96,
       "genesis_ts": 1786650097190,
       "change_24h": {
-        "usd": -151.26,
-        "pct": -49.9
+        "usd": 59724.41,
+        "pct": 19713.7
       },
       "change_7d": {
-        "usd": -151.26,
-        "pct": -49.9
+        "usd": 59724.41,
+        "pct": 19713.7
       },
       "change_30d": {
-        "usd": -151.26,
-        "pct": -49.9
+        "usd": 59724.41,
+        "pct": 19713.7
       }
     },
     {
-      "token": "0x50d4a40513218ed99a60ba61ff3679246b479d50",
-      "symbol": "DUST",
-      "name": "Fractional Fairies",
-      "current_lp_usd": 141.63,
-      "genesis_lp_usd": 141.63,
-      "genesis_ts": 1786653655691,
+      "token": "0x459f32cf930aaef71e7a3fe55c6b8fe53e7ba4a1",
+      "symbol": "ARH",
+      "name": "Agent Robinhood",
+      "current_lp_usd": 57273.4,
+      "genesis_lp_usd": 17067.85,
+      "genesis_ts": 1786650097190,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 40205.55,
+        "pct": 235.6
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 40205.55,
+        "pct": 235.6
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x2d01f6a6bc54f5cf14c49c3fc22f15e79d7bb654",
-      "symbol": "JUKES",
-      "name": "Jukes the Jukebox",
-      "current_lp_usd": 125.36,
-      "genesis_lp_usd": 125.36,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 40205.55,
+        "pct": 235.6
       }
     },
     {
       "token": "0x1db8014dc880bad8935a27084aadd837ccdffe54",
       "symbol": "VNYL",
       "name": "Vincent Vinyl x International Vinyl day",
-      "current_lp_usd": 100.46,
+      "current_lp_usd": 51863.82,
       "genesis_lp_usd": 100.46,
       "genesis_ts": 1786653655691,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 51763.36,
+        "pct": 51527.4
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 51763.36,
+        "pct": 51527.4
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 51763.36,
+        "pct": 51527.4
       }
     },
     {
-      "token": "0x7cfbefb06ade24b8e0b7aea99be2bd0624f08d1b",
-      "symbol": "BURRITOGATE",
-      "name": "burritogate",
-      "current_lp_usd": 79.87,
-      "genesis_lp_usd": 79.87,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x86842fd7e3e68614dcdee8609bff97be19ab2910",
-      "symbol": "Momota",
-      "name": "モモ太",
-      "current_lp_usd": 75.96,
-      "genesis_lp_usd": 1804.05,
-      "genesis_ts": 1786653248037,
-      "change_24h": {
-        "usd": -1728.08,
-        "pct": -95.8
-      },
-      "change_7d": {
-        "usd": -1728.08,
-        "pct": -95.8
-      },
-      "change_30d": {
-        "usd": -1728.08,
-        "pct": -95.8
-      }
-    },
-    {
-      "token": "0x6bfb48027382a4f420f17dd7c65f43191fee79ba",
-      "symbol": "007",
-      "name": "agent 007",
-      "current_lp_usd": 72.43,
-      "genesis_lp_usd": 72.43,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xcfd7328ad5d77d88cb7baabd61155469ad93b23c",
-      "symbol": "CHAD",
-      "name": "chad in  hood",
-      "current_lp_usd": 68.37,
-      "genesis_lp_usd": 68.37,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x30084e90eab4c06a99298897b33328048956bdd4",
-      "symbol": "ARCADE",
-      "name": "ARCADE PAD",
-      "current_lp_usd": 63.5,
-      "genesis_lp_usd": 131.97,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": -68.47,
-        "pct": -51.9
-      },
-      "change_7d": {
-        "usd": -68.47,
-        "pct": -51.9
-      },
-      "change_30d": {
-        "usd": -68.47,
-        "pct": -51.9
-      }
-    },
-    {
-      "token": "0xebe81d42fa6ca1a9d78921fc5d71b117dc604be0",
-      "symbol": "CATFROG",
-      "name": "cat frog",
-      "current_lp_usd": 40.17,
-      "genesis_lp_usd": 40.17,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x37f1299de15fff6be519bbf2bf7f2ad7c0fc016c",
-      "symbol": "FLOKI",
-      "name": "Floki Uni",
-      "current_lp_usd": 37.24,
-      "genesis_lp_usd": 37.24,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x374d16b407b812a0957416d4bc3db8c0b8d8fff3",
-      "symbol": "VORQ",
-      "name": "Vorq",
-      "current_lp_usd": 35.36,
-      "genesis_lp_usd": 35.36,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x7d06ffedab4f00bef4612898a2c7e54b0f483054",
-      "symbol": "SPX4663",
-      "name": "SPX4663",
-      "current_lp_usd": 25.62,
-      "genesis_lp_usd": 67.07,
-      "genesis_ts": 1786651518354,
-      "change_24h": {
-        "usd": -41.44,
-        "pct": -61.8
-      },
-      "change_7d": {
-        "usd": -41.44,
-        "pct": -61.8
-      },
-      "change_30d": {
-        "usd": -41.44,
-        "pct": -61.8
-      }
-    },
-    {
-      "token": "0xb619cae9632ffdb3793f9050755d65e268871a16",
-      "symbol": "FLOKI",
-      "name": "UNI FLOKI",
-      "current_lp_usd": 25,
-      "genesis_lp_usd": 6759.24,
-      "genesis_ts": 1786650679332,
-      "change_24h": {
-        "usd": -6734.24,
-        "pct": -99.6
-      },
-      "change_7d": {
-        "usd": -6734.24,
-        "pct": -99.6
-      },
-      "change_30d": {
-        "usd": -6734.24,
-        "pct": -99.6
-      }
-    },
-    {
-      "token": "0x212684dd60623a4ffa771fbd9af7cd9d4f831980",
-      "symbol": "CFM",
-      "name": "CrowdFundMarkets",
-      "current_lp_usd": 22.93,
-      "genesis_lp_usd": 65.66,
-      "genesis_ts": 1786650525701,
-      "change_24h": {
-        "usd": -42.73,
-        "pct": -65.1
-      },
-      "change_7d": {
-        "usd": -42.73,
-        "pct": -65.1
-      },
-      "change_30d": {
-        "usd": -42.73,
-        "pct": -65.1
-      }
-    },
-    {
-      "token": "0x958b6b75ba05948ca32b493c81dd56bd6fc5c0cd",
-      "symbol": "HOODGANG",
-      "name": "HOOD GANG",
-      "current_lp_usd": 20.59,
-      "genesis_lp_usd": 20.59,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x09aa1f6b49f48e127b629215f5ced6ae356c73b6",
-      "symbol": "SS",
-      "name": "Stray Society",
-      "current_lp_usd": 19.68,
-      "genesis_lp_usd": 39.35,
+      "token": "0x39313a9d236fd661a00522f51bc0d7cd891621a3",
+      "symbol": "GROTTO",
+      "name": "Grotto Trade",
+      "current_lp_usd": 48955.17,
+      "genesis_lp_usd": 150.12,
       "genesis_ts": 1786652784880,
       "change_24h": {
-        "usd": -19.68,
-        "pct": -50
+        "usd": 48805.05,
+        "pct": 32510.7
       },
       "change_7d": {
-        "usd": -19.68,
-        "pct": -50
+        "usd": 48805.05,
+        "pct": 32510.7
       },
       "change_30d": {
-        "usd": -19.68,
-        "pct": -50
+        "usd": 48805.05,
+        "pct": 32510.7
       }
     },
     {
-      "token": "0xe7391b04863bd587e7f5749f53d9158522decab1",
-      "symbol": "CATFROG",
-      "name": "Cat frog",
-      "current_lp_usd": 18.86,
-      "genesis_lp_usd": 18.86,
-      "genesis_ts": 1786653655691,
+      "token": "0x0a0eb0968df9f460e5c0468b7efcd3f2057d89e6",
+      "symbol": "SBM",
+      "name": "Stonk Broker Machine",
+      "current_lp_usd": 46335.78,
+      "genesis_lp_usd": 76.01,
+      "genesis_ts": 1786652362260,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 46259.77,
+        "pct": 60856.7
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 46259.77,
+        "pct": 60856.7
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 46259.77,
+        "pct": 60856.7
       }
     },
     {
-      "token": "0x33eb54cf9f9ad680c06da87d9ea692462fad5573",
-      "symbol": "NASDAQ",
-      "name": "6900",
-      "current_lp_usd": 17,
-      "genesis_lp_usd": 17,
-      "genesis_ts": 1786653655691,
+      "token": "0xf59b5aaab3305d45bed821960104c98a1a7cbea0",
+      "symbol": "PWH",
+      "name": "PepeWifHat",
+      "current_lp_usd": 44969.29,
+      "genesis_lp_usd": 104.44,
+      "genesis_ts": 1786651518354,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44864.86,
+        "pct": 42959.3
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44864.86,
+        "pct": 42959.3
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44864.86,
+        "pct": 42959.3
       }
     },
     {
-      "token": "0xcef5c14f23ff050bfa01105ee7f774ef0e19c962",
-      "symbol": "CATNALD",
-      "name": "Catnald",
-      "current_lp_usd": 15.57,
-      "genesis_lp_usd": 15.57,
-      "genesis_ts": 1786653655691,
+      "token": "0xb1cb4d3c7c1188e93237d762fb71b0adb766bdca",
+      "symbol": "SYNCO",
+      "name": "SynthcoreAI",
+      "current_lp_usd": 44684.84,
+      "genesis_lp_usd": 175.28,
+      "genesis_ts": 1786652784880,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44509.56,
+        "pct": 25393.8
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44509.56,
+        "pct": 25393.8
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 44509.56,
+        "pct": 25393.8
       }
     },
     {
-      "token": "0x1676c639074667b0fb65c40873c21c92cfaaeb29",
-      "symbol": "SHIPDD",
-      "name": "Shipd",
-      "current_lp_usd": 14.93,
-      "genesis_lp_usd": 14.93,
-      "genesis_ts": 1786653655691,
+      "token": "0xc15b6cb46c35ce9bcc9a695c7f0498276873a370",
+      "symbol": "BUST",
+      "name": "BUST_NUTYEAR",
+      "current_lp_usd": 44358.89,
+      "genesis_lp_usd": 393.33,
+      "genesis_ts": 1786651518354,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 43965.56,
+        "pct": 11177.7
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 43965.56,
+        "pct": 11177.7
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 43965.56,
+        "pct": 11177.7
       }
     },
     {
-      "token": "0x3a3035f1af55bc1d0b875de00fbbc04cfd0ccd33",
-      "symbol": "POPWIFHA",
-      "name": "POP WIF HAT",
-      "current_lp_usd": 13.42,
-      "genesis_lp_usd": 13.42,
-      "genesis_ts": 1786653655691,
+      "token": "0x9ac06c3e00077e745e5870369b34716b444f58e9",
+      "symbol": "NVDA",
+      "name": "No Value Dog Asset",
+      "current_lp_usd": 42776.69,
+      "genesis_lp_usd": 201.39,
+      "genesis_ts": 1786651518354,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 42575.3,
+        "pct": 21140.4
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 42575.3,
+        "pct": 21140.4
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 42575.3,
+        "pct": 21140.4
       }
     },
     {
-      "token": "0x78b29ba95cef0b694311cb29d013e3c0d5a5fbb7",
-      "symbol": "007",
-      "name": "AGENT007",
-      "current_lp_usd": 13.15,
-      "genesis_lp_usd": 13.15,
-      "genesis_ts": 1786653655691,
+      "token": "0x13fdfabfe2a9fb25376ba3b778b03758e18338f9",
+      "symbol": "INTERN",
+      "name": "INTERN",
+      "current_lp_usd": 42063.62,
+      "genesis_lp_usd": 123.41,
+      "genesis_ts": 1786652362260,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 41940.22,
+        "pct": 33985
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 41940.22,
+        "pct": 33985
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 41940.22,
+        "pct": 33985
       }
     },
     {
-      "token": "0xb93b1c095e57f4e539928a6e73935fa46a581cd3",
-      "symbol": "007",
-      "name": "agent007",
-      "current_lp_usd": 12.66,
-      "genesis_lp_usd": 12.66,
+      "token": "0xfe61a50d225236b6b3a2fb859820feada635f7a8",
+      "symbol": "STONKFUN",
+      "name": "Stonk Fun",
+      "current_lp_usd": 38110.9,
+      "genesis_lp_usd": 715.12,
       "genesis_ts": 1786653655691,
       "change_24h": {
-        "usd": 0,
-        "pct": 0
+        "usd": 37395.78,
+        "pct": 5229.3
       },
       "change_7d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 37395.78,
+        "pct": 5229.3
       },
       "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xcf76e857531cd4299c965717e20f5255fbc7505a",
-      "symbol": "MARSCOIN",
-      "name": "MARSCOIN",
-      "current_lp_usd": 12.43,
-      "genesis_lp_usd": 12.43,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xeefcebb3cf932bb0202ce2772a03b53909cd33fa",
-      "symbol": "FRONGJAK",
-      "name": "Frongjak on Robinhood",
-      "current_lp_usd": 12.04,
-      "genesis_lp_usd": 12.04,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0x823d9b2cfe1f6bc05f185455ce8bcab0af626e21",
-      "symbol": "GROX",
-      "name": "GroX",
-      "current_lp_usd": 11,
-      "genesis_lp_usd": 11,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xeef8f513ccacc44f17662116cd1318d5cd7ca7f9",
-      "symbol": "STONKBROKE",
-      "name": "STONKBROKER",
-      "current_lp_usd": 10.88,
-      "genesis_lp_usd": 10.88,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
-      }
-    },
-    {
-      "token": "0xc2c3b5a6444268956a2de89c43b0052152a4f8c5",
-      "symbol": "CHAD",
-      "name": "chad in hood",
-      "current_lp_usd": 10.13,
-      "genesis_lp_usd": 10.13,
-      "genesis_ts": 1786653655691,
-      "change_24h": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_7d": {
-        "usd": 0,
-        "pct": 0
-      },
-      "change_30d": {
-        "usd": 0,
-        "pct": 0
+        "usd": 37395.78,
+        "pct": 5229.3
       }
     }
   ]
