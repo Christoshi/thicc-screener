@@ -27,11 +27,9 @@
             <th class="px-3 py-3">#</th>
             <th class="px-3 py-3">Token</th>
             <th class="px-3 py-3 text-right">LP Value</th>
-            <th class="px-3 py-3 text-right">ETH side</th>
-            <th class="px-3 py-3 text-right">Token side</th>
-            <th class="px-3 py-3 text-right">All Fees Added</th>
-            <th class="px-3 py-3 text-right">24h ETH Added</th>
-            <th class="px-3 py-3 text-right">24h Tokens Added</th>
+            <th class="px-3 py-3 text-right">24h LP</th>
+            <th class="px-3 py-3 text-right">7d LP</th>
+            <th class="px-3 py-3 text-right">30d LP</th>
             <th class="px-3 py-3 text-right">FDV</th>
             <th class="px-3 py-3 text-right">Volume</th>
             <th class="px-3 py-3 text-right">Price</th>
@@ -47,13 +45,20 @@
     const fmtUsd = (n) => {
       if (n == null || n === "" || Number.isNaN(n)) return "—";
       const x = Number(n);
-      if (x >= 1e6) return "$" + (x / 1e6).toFixed(2) + "M";
-      if (x >= 1e3) return "$" + (x / 1e3).toFixed(1) + "k";
-      if (x >= 1) return "$" + x.toFixed(2);
-      if (x >= 0.0001) return "$" + x.toFixed(4);
+      if (Math.abs(x) >= 1e6) return "$" + (x / 1e6).toFixed(2) + "M";
+      if (Math.abs(x) >= 1e3) return "$" + (x / 1e3).toFixed(1) + "k";
+      if (Math.abs(x) >= 1) return "$" + x.toFixed(2);
+      if (Math.abs(x) >= 0.0001) return "$" + x.toFixed(4);
       return "$" + x.toExponential(2);
     };
-    const dash = (v) => (v == null || v === "" ? "—" : v);
+
+    const fmtChange = (usd, pct) => {
+      if (usd == null && pct == null) return "—";
+      const cls = (pct ?? usd) > 0 ? "pos" : (pct ?? usd) < 0 ? "neg" : "";
+      const p = pct != null ? (pct > 0 ? "+" : "") + pct.toFixed(1) + "%" : "";
+      const u = usd != null ? fmtUsd(usd) : "";
+      return `<span class="${cls}">${u}${p ? " (" + p + ")" : ""}</span>`;
+    };
 
     async function load() {
       const res = await fetch("/thicc-screener/data.json?t=" + Date.now());
@@ -65,9 +70,7 @@
       tbody.innerHTML = data.tokens
         .map((t, i) => {
           const short = t.token ? t.token.slice(0, 6) + "…" + t.token.slice(-4) : "";
-          const trade = t.token
-            ? `https://pools.trade/?token=${t.token}`
-            : "#";
+          const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
           return `<tr class="hover:bg-neutral-900/80">
             <td class="px-3 py-2 text-neutral-500">${i + 1}</td>
             <td class="px-3 py-2">
@@ -75,11 +78,9 @@
               <div class="text-xs text-neutral-500">${t.name || ""} · ${short}</div>
             </td>
             <td class="px-3 py-2 text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
-            <td class="px-3 py-2 text-right">${dash(t.eth_side != null ? fmtUsd(t.eth_side) : null)}</td>
-            <td class="px-3 py-2 text-right">${dash(t.token_side != null ? fmtUsd(t.token_side) : null)}</td>
-            <td class="px-3 py-2 text-right">${dash(t.all_fees_added)}</td>
-            <td class="px-3 py-2 text-right">${dash(t.fees_24h_eth)}</td>
-            <td class="px-3 py-2 text-right">${dash(t.fees_24h_tokens)}</td>
+            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
+            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
+            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
             <td class="px-3 py-2 text-right">${fmtUsd(t.fdv)}</td>
             <td class="px-3 py-2 text-right">${fmtUsd(t.volume_24h)}</td>
             <td class="px-3 py-2 text-right">${fmtUsd(t.price)}</td>
