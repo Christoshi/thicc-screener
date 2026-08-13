@@ -21,14 +21,12 @@ jobs:
           node-version: "20"
 
       - name: Run fetch script
-        env:
-          BITQUERY_API_KEY: ${{ secrets.BITQUERY_API_KEY }}
         run: node fetch-lp.js
 
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json data/history.json data/known.json
+          git add data.json
           git diff --quiet && git diff --staged --quiet || git commit -m "Update LP data"
           git push
