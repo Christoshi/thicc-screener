@@ -23,7 +23,7 @@ jobs:
       - name: Run fetch script
         env:
           BITQUERY_API_KEY: ${{ secrets.BITQUERY_API_KEY }}
-        run: node fetch-lp.js
+        run: node backfill.js
 
       - name: Commit updated data
         run: |
