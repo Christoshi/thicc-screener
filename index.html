@@ -9,36 +9,81 @@
     body { background: #0a0a0a; color: #e5e5e5; }
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
-    table { font-variant-numeric: tabular-nums; table-layout: auto; }
-    th.token-col, td.token-col { max-width: 140px; width: 140px; }
-    .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; }
+    table {
+      table-layout: fixed;
+      width: 100%;
+      font-variant-numeric: tabular-nums;
+    }
+    th, td {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 0.5rem 0.4rem;
+      vertical-align: middle;
+    }
+    .token-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+    .token-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #262626;
+    }
+    .token-logo-fallback {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: #262626;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+    .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; flex-shrink: 0; }
     .copy-btn:hover { opacity: 1; }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
-  <div class="max-w-[1600px] mx-auto">
-    <h1 class="text-3xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
-    <p class="text-sm text-neutral-400 mb-6">
+<body class="min-h-screen p-4 md:p-6">
+  <div class="max-w-[1400px] mx-auto">
+    <h1 class="text-2xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
+    <p class="text-sm text-neutral-400 mb-4">
       pools.trade · ranked by LP Value ·
       <span id="updated">loading…</span>
     </p>
 
     <div class="overflow-x-auto rounded-lg border border-neutral-800">
-      <table class="w-full text-sm text-left">
+      <table class="text-sm text-left">
+        <colgroup>
+          <col style="width:4%" />
+          <col style="width:18%" />
+          <col style="width:10%" />
+          <col style="width:11%" />
+          <col style="width:11%" />
+          <col style="width:11%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:5%" />
+        </colgroup>
         <thead class="bg-neutral-900 text-neutral-400 uppercase text-xs">
           <tr>
-            <th class="px-2 py-3 w-10">#</th>
-            <th class="px-2 py-3 token-col">Token</th>
-            <th class="px-2 py-3 text-right">LP Value</th>
-            <th class="px-2 py-3 text-right">ETH side</th>
-            <th class="px-2 py-3 text-right">Token side</th>
-            <th class="px-2 py-3 text-right">24h</th>
-            <th class="px-2 py-3 text-right">7d</th>
-            <th class="px-2 py-3 text-right">30d</th>
-            <th class="px-2 py-3 text-right">FDV</th>
-            <th class="px-2 py-3 text-right">Volume</th>
-            <th class="px-2 py-3 text-right">Price</th>
-            <th class="px-2 py-3">Trade</th>
+            <th>#</th>
+            <th>Token</th>
+            <th class="text-right">LP Value</th>
+            <th class="text-right">24h</th>
+            <th class="text-right">7d</th>
+            <th class="text-right">30d</th>
+            <th class="text-right">FDV</th>
+            <th class="text-right">Volume</th>
+            <th class="text-right">Price</th>
+            <th>Trade</th>
           </tr>
         </thead>
         <tbody id="rows" class="divide-y divide-neutral-800"></tbody>
@@ -71,12 +116,20 @@
 
     const fmtChange = (usd, pct) => {
       if (usd == null && pct == null) return "—";
-      const cls = (usd ?? pct) >= 0 ? "pos" : "neg";
-      const sign = (usd ?? 0) >= 0 ? "+" : "";
-      const u = usd != null ? sign + fmtUsd(Math.abs(usd)).replace("$", "$") : "";
+      const v = usd ?? pct;
+      const cls = v >= 0 ? "pos" : "neg";
+      const sign = v >= 0 ? "+" : "";
+      const u = usd != null ? sign + fmtUsd(Math.abs(usd)) : "";
       const p = pct != null ? ` (${sign}${Number(pct).toFixed(1)}%)` : "";
-      return `<span class="${cls}">${usd != null && usd < 0 ? "-" : ""}${u.replace(/^-/, "")}${p}</span>`;
+      return `<span class="${cls}">${u}${p}</span>`;
     };
+
+    function tokenLogo(t) {
+      if (t.image) {
+        return `<img class="token-logo" src="${t.image}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
+      }
+      return `<span class="token-logo-fallback">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
+    }
 
     function copyCA(addr, el) {
       navigator.clipboard.writeText(addr).then(() => {
@@ -93,29 +146,31 @@
       document.getElementById("updated").textContent =
         "updated " + new Date(data.updated).toLocaleString();
 
-      const tbody = document.getElementById("rows");
-      tbody.innerHTML = data.tokens
+      document.getElementById("rows").innerHTML = data.tokens
         .map((t, i) => {
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
           return `<tr class="hover:bg-neutral-900/80">
-            <td class="px-2 py-2 text-neutral-500">${i + 1}</td>
-            <td class="px-2 py-2 token-col">
-              <div class="font-semibold text-white inline-flex items-center whitespace-nowrap">
-                ${t.symbol || "???"}
-                <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
+            <td class="text-neutral-500">${i + 1}</td>
+            <td>
+              <div class="token-cell">
+                ${tokenLogo(t)}
+                <div class="min-w-0">
+                  <div class="font-semibold text-white inline-flex items-center max-w-full">
+                    <span class="truncate">${t.symbol || "???"}</span>
+                    <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
+                  </div>
+                  <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
+                </div>
               </div>
-              <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
             </td>
-            <td class="px-2 py-2 text-right font-medium text-emerald-400 whitespace-nowrap">${fmtUsd(t.lp_value)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.eth_side)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.token_side)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.fdv)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.volume_24h)}</td>
-            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtPrice(t.price)}</td>
-            <td class="px-2 py-2"><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
+            <td class="text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
+            <td class="text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
+            <td class="text-right">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
+            <td class="text-right">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
+            <td class="text-right">${fmtUsd(t.fdv)}</td>
+            <td class="text-right">${fmtUsd(t.volume_24h)}</td>
+            <td class="text-right">${fmtPrice(t.price)}</td>
+            <td><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
           </tr>`;
         })
         .join("");
