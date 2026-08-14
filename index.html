@@ -9,7 +9,8 @@
     body { background: #0a0a0a; color: #e5e5e5; }
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
-    table { font-variant-numeric: tabular-nums; }
+    table { font-variant-numeric: tabular-nums; table-layout: auto; }
+    th.token-col, td.token-col { max-width: 140px; width: 140px; }
     .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; }
     .copy-btn:hover { opacity: 1; }
   </style>
@@ -26,18 +27,18 @@
       <table class="w-full text-sm text-left">
         <thead class="bg-neutral-900 text-neutral-400 uppercase text-xs">
           <tr>
-            <th class="px-3 py-3">#</th>
-            <th class="px-3 py-3">Token</th>
-            <th class="px-3 py-3 text-right">LP Value</th>
-            <th class="px-3 py-3 text-right">ETH side</th>
-            <th class="px-3 py-3 text-right">Token side</th>
-            <th class="px-3 py-3 text-right">24h</th>
-            <th class="px-3 py-3 text-right">7d</th>
-            <th class="px-3 py-3 text-right">30d</th>
-            <th class="px-3 py-3 text-right">FDV</th>
-            <th class="px-3 py-3 text-right">Volume</th>
-            <th class="px-3 py-3 text-right">Price</th>
-            <th class="px-3 py-3">Trade</th>
+            <th class="px-2 py-3 w-10">#</th>
+            <th class="px-2 py-3 token-col">Token</th>
+            <th class="px-2 py-3 text-right">LP Value</th>
+            <th class="px-2 py-3 text-right">ETH side</th>
+            <th class="px-2 py-3 text-right">Token side</th>
+            <th class="px-2 py-3 text-right">24h</th>
+            <th class="px-2 py-3 text-right">7d</th>
+            <th class="px-2 py-3 text-right">30d</th>
+            <th class="px-2 py-3 text-right">FDV</th>
+            <th class="px-2 py-3 text-right">Volume</th>
+            <th class="px-2 py-3 text-right">Price</th>
+            <th class="px-2 py-3">Trade</th>
           </tr>
         </thead>
         <tbody id="rows" class="divide-y divide-neutral-800"></tbody>
@@ -72,9 +73,9 @@
       if (usd == null && pct == null) return "—";
       const cls = (usd ?? pct) >= 0 ? "pos" : "neg";
       const sign = (usd ?? 0) >= 0 ? "+" : "";
-      const u = usd != null ? sign + fmtUsd(usd).replace("$", "$") : "";
-      const p = pct != null ? ` (${sign}${pct.toFixed(1)}%)` : "";
-      return `<span class="${cls}">${u}${p}</span>`;
+      const u = usd != null ? sign + fmtUsd(Math.abs(usd)).replace("$", "$") : "";
+      const p = pct != null ? ` (${sign}${Number(pct).toFixed(1)}%)` : "";
+      return `<span class="${cls}">${usd != null && usd < 0 ? "-" : ""}${u.replace(/^-/, "")}${p}</span>`;
     };
 
     function copyCA(addr, el) {
@@ -97,24 +98,24 @@
         .map((t, i) => {
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
           return `<tr class="hover:bg-neutral-900/80">
-            <td class="px-3 py-2 text-neutral-500">${i + 1}</td>
-            <td class="px-3 py-2">
-              <div class="font-semibold text-white inline-flex items-center">
+            <td class="px-2 py-2 text-neutral-500">${i + 1}</td>
+            <td class="px-2 py-2 token-col">
+              <div class="font-semibold text-white inline-flex items-center whitespace-nowrap">
                 ${t.symbol || "???"}
                 <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
               </div>
-              <div class="text-xs text-neutral-500">${t.name || ""}</div>
+              <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
             </td>
-            <td class="px-3 py-2 text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
-            <td class="px-3 py-2 text-right">${fmtUsd(t.eth_side)}</td>
-            <td class="px-3 py-2 text-right">${fmtUsd(t.token_side)}</td>
-            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
-            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
-            <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
-            <td class="px-3 py-2 text-right">${fmtUsd(t.fdv)}</td>
-            <td class="px-3 py-2 text-right">${fmtUsd(t.volume_24h)}</td>
-            <td class="px-3 py-2 text-right">${fmtPrice(t.price)}</td>
-            <td class="px-3 py-2"><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
+            <td class="px-2 py-2 text-right font-medium text-emerald-400 whitespace-nowrap">${fmtUsd(t.lp_value)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.eth_side)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.token_side)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.fdv)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtUsd(t.volume_24h)}</td>
+            <td class="px-2 py-2 text-right whitespace-nowrap">${fmtPrice(t.price)}</td>
+            <td class="px-2 py-2"><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
           </tr>`;
         })
         .join("");
