@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>THICC Screener</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -12,6 +12,7 @@
     table {
       table-layout: fixed;
       width: 100%;
+      min-width: 900px;
       font-variant-numeric: tabular-nums;
     }
     th, td {
@@ -28,42 +29,38 @@
       gap: 0.5rem;
       min-width: 0;
     }
-    .token-logo {
+    .token-logo, .token-logo-fallback {
       width: 28px;
       height: 28px;
       border-radius: 50%;
-      object-fit: cover;
       flex-shrink: 0;
       background: #262626;
+      object-fit: cover;
     }
     .token-logo-fallback {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      background: #262626;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 14px;
     }
-    .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; flex-shrink: 0; }
-    .copy-btn:hover { opacity: 1; }
+    .copy-btn { opacity: 0.45; cursor: pointer; flex-shrink: 0; }
+    .copy-btn:hover, .copy-btn:active { opacity: 1; }
     #search {
       background: #171717;
       border: 1px solid #333;
       color: #e5e5e5;
       border-radius: 9999px;
-      padding: 0.4rem 0.9rem 0.4rem 2rem;
+      padding: 0.5rem 0.9rem 0.5rem 2.1rem;
       font-size: 0.875rem;
-      width: 200px;
+      width: 100%;
+      max-width: 280px;
       outline: none;
     }
     #search:focus { border-color: #34d399; }
-    .search-wrap { position: relative; }
+    .search-wrap { position: relative; width: 100%; max-width: 280px; }
     .search-wrap svg {
       position: absolute;
-      left: 0.65rem;
+      left: 0.7rem;
       top: 50%;
       transform: translateY(-50%);
       width: 14px;
@@ -74,9 +71,9 @@
     .topnav {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
+      gap: 0.15rem;
       flex-wrap: wrap;
-      padding: 0.65rem 1rem;
+      padding: 0.55rem 0.75rem;
       background: #0d0d0d;
       border-bottom: 1px solid #1f1f1f;
       position: sticky;
@@ -86,21 +83,20 @@
     .topnav a {
       display: inline-flex;
       align-items: center;
-      gap: 0.35rem;
-      padding: 0.4rem 0.75rem;
+      gap: 0.3rem;
+      padding: 0.4rem 0.6rem;
       border-radius: 0.5rem;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
       color: #d4d4d4;
       text-decoration: none;
       white-space: nowrap;
     }
-    .topnav a:hover { background: #1a1a1a; color: #fff; }
+    .topnav a:hover, .topnav a:active { background: #1a1a1a; color: #fff; }
     .topnav .brand {
       font-weight: 700;
       color: #34d399;
-      font-size: 0.95rem;
-      letter-spacing: 0.02em;
-      margin-right: 0.5rem;
+      font-size: 0.9rem;
+      margin-right: 0.25rem;
     }
     .topnav .brand:hover { color: #6ee7b7; background: transparent; }
     .page-btn {
@@ -108,12 +104,51 @@
       border: 1px solid #333;
       color: #e5e5e5;
       border-radius: 0.5rem;
-      padding: 0.4rem 1rem;
+      padding: 0.5rem 1.1rem;
       font-size: 0.875rem;
       cursor: pointer;
+      min-height: 44px;
     }
     .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    /* Mobile cards */
+    .mobile-list { display: none; }
+    .m-card {
+      border: 1px solid #262626;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1rem;
+      background: #111;
+    }
+    .m-card + .m-card { margin-top: 0.6rem; }
+    .m-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+    .m-row + .m-row { margin-top: 0.35rem; }
+    .m-label { color: #737373; }
+    .m-trade {
+      display: inline-block;
+      margin-top: 0.65rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 0.5rem;
+      background: #064e3b;
+      color: #6ee7b7;
+      font-size: 0.8rem;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    @media (max-width: 767px) {
+      .desktop-table { display: none !important; }
+      .mobile-list { display: block; }
+      #search, .search-wrap { max-width: none; }
+      .topnav a { font-size: 0.75rem; padding: 0.35rem 0.5rem; }
+      .token-logo, .token-logo-fallback { width: 32px; height: 32px; }
+    }
   </style>
 </head>
 <body>
@@ -123,26 +158,26 @@
       ThiccScreener
     </a>
     <a href="https://pools.trade/t/0xE72936b1fE4cc0a521aE82bb9239F28f3FdB1C5D" target="_blank" rel="noopener">Buy THICC</a>
-    <a href="https://dexscreener.com/robinhood/0xE72936b1fE4cc0a521aE82bb9239F28f3FdB1C5D" target="_blank" rel="noopener">THICC Chart</a>
-    <a href="https://t.me/THICCcommunity" target="_blank" rel="noopener">Join TG</a>
+    <a href="https://dexscreener.com/robinhood/0xE72936b1fE4cc0a521aE82bb9239F28f3FdB1C5D" target="_blank" rel="noopener">Chart</a>
+    <a href="https://t.me/THICCcommunity" target="_blank" rel="noopener">TG</a>
   </nav>
 
-  <div class="max-w-[1400px] mx-auto p-4 md:p-6" style="padding-top: 2.5rem;">
-    <div class="flex flex-wrap items-end justify-between gap-3 mb-8">
-      <p class="text-sm text-neutral-400">
-        Discover the top 1,000 tokens on
+  <div class="max-w-[1400px] mx-auto px-3 py-4 sm:p-4 md:p-6">
+    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-3 mb-5 sm:mb-8">
+      <p class="text-sm text-neutral-400 leading-snug">
+        Top tokens on
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
-        ranked by LP value
+        by LP value
       </p>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
         </svg>
-        <input id="search" type="search" placeholder="Search any token" autocomplete="off" />
+        <input id="search" type="search" placeholder="Search token / CA" autocomplete="off" />
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-neutral-800">
+    <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800 -mx-0">
       <table class="text-sm">
         <colgroup>
           <col style="width:4%" />
@@ -173,6 +208,8 @@
         <tbody id="rows" class="divide-y divide-neutral-800"></tbody>
       </table>
     </div>
+
+    <div id="mobile-rows" class="mobile-list"></div>
 
     <div class="flex items-center justify-between mt-4 gap-3">
       <span id="page-info" class="text-sm text-neutral-500"></span>
@@ -275,12 +312,36 @@
         })
         .join("");
 
+      document.getElementById("mobile-rows").innerHTML = slice
+        .map((t, i) => {
+          const rank = start + i + 1;
+          const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
+          return `<div class="m-card">
+            <div class="token-cell" style="margin-bottom:0.6rem">
+              <span class="text-neutral-500 text-xs w-6 shrink-0">#${rank}</span>
+              ${tokenLogo(t)}
+              <div class="min-w-0 flex-1">
+                <div class="font-semibold text-white inline-flex items-center">
+                  <span class="truncate">${t.symbol || "???"}</span>
+                  <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
+                </div>
+                <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
+              </div>
+              <div class="text-emerald-400 font-semibold text-sm shrink-0">${fmtUsd(t.lp_value)}</div>
+            </div>
+            <div class="m-row"><span class="m-label">24h LP</span><span>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</span></div>
+            <div class="m-row"><span class="m-label">FDV</span><span>${fmtUsd(t.fdv)}</span></div>
+            <div class="m-row"><span class="m-label">Vol 24h</span><span>${fmtUsd(t.volume_24h)}</span></div>
+            <div class="m-row"><span class="m-label">Price</span><span>${fmtPrice(t.price)}</span></div>
+            <a class="m-trade" href="${trade}" target="_blank" rel="noopener">Trade on Pools →</a>
+          </div>`;
+        })
+        .join("");
+
       const from = filtered.length ? start + 1 : 0;
       const to = Math.min(start + PAGE_SIZE, filtered.length);
       document.getElementById("page-info").textContent =
-        filtered.length
-          ? `${from}–${to} of ${filtered.length}`
-          : "No results";
+        filtered.length ? `${from}–${to} of ${filtered.length}` : "No results";
 
       document.getElementById("prev").disabled = page <= 0;
       document.getElementById("next").disabled = page >= totalPages() - 1;
