@@ -148,4 +148,176 @@
           <col style="width:4%" />
           <col style="width:16%" />
           <col style="width:10%" />
-         
+          <col style="width:11%" />
+          <col style="width:11%" />
+          <col style="width:11%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:7%" />
+        </colgroup>
+        <thead class="bg-neutral-900 text-neutral-400 text-xs">
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th>LP Value</th>
+            <th>24h</th>
+            <th>7d</th>
+            <th>30d</th>
+            <th>Fdv</th>
+            <th>Volume</th>
+            <th>Price</th>
+            <th>Trade</th>
+          </tr>
+        </thead>
+        <tbody id="rows" class="divide-y divide-neutral-800"></tbody>
+      </table>
+    </div>
+
+    <div class="flex items-center justify-between mt-4 gap-3">
+      <span id="page-info" class="text-sm text-neutral-500"></span>
+      <div class="flex gap-2">
+        <button id="prev" class="page-btn" type="button">Prev</button>
+        <button id="next" class="page-btn" type="button">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAGE_SIZE = 20;
+    const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
+    const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
+
+    let allTokens = [];
+    let filtered = [];
+    let page = 0;
+
+    const fmtUsd = (n) => {
+      if (n == null || n === "" || Number.isNaN(Number(n))) return "—";
+      const x = Number(n);
+      if (Math.abs(x) >= 1e6) return "$" + (x / 1e6).toFixed(2) + "M";
+      if (Math.abs(x) >= 1e3) return "$" + (x / 1e3).toFixed(1) + "k";
+      if (Math.abs(x) >= 1) return "$" + x.toFixed(2);
+      if (Math.abs(x) >= 0.01) return "$" + x.toFixed(4);
+      return "$" + x.toFixed(6);
+    };
+
+    const fmtPrice = (n) => {
+      if (n == null || Number.isNaN(Number(n))) return "—";
+      const x = Number(n);
+      if (x >= 1) return "$" + x.toFixed(4);
+      if (x >= 0.0001) return "$" + x.toFixed(6);
+      if (x >= 1e-8) return "$" + x.toFixed(10);
+      return "$" + x.toFixed(12);
+    };
+
+    const fmtChange = (usd, pct) => {
+      if (usd == null && pct == null) return "—";
+      const v = usd ?? pct;
+      const cls = v >= 0 ? "pos" : "neg";
+      const sign = v >= 0 ? "+" : "";
+      const u = usd != null ? sign + fmtUsd(Math.abs(usd)) : "";
+      const p = pct != null ? ` (${sign}${Number(pct).toFixed(1)}%)` : "";
+      return `<span class="${cls}">${u}${p}</span>`;
+    };
+
+    function tokenLogo(t) {
+      if (t.image) {
+        return `<img class="token-logo" src="${t.image}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
+      }
+      return `<span class="token-logo-fallback">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
+    }
+
+    function copyCA(addr, el) {
+      navigator.clipboard.writeText(addr).then(() => {
+        const prev = el.innerHTML;
+        el.innerHTML = CHECK_ICON;
+        setTimeout(() => { el.innerHTML = prev; }, 1200);
+      });
+    }
+    window.copyCA = copyCA;
+
+    function totalPages() {
+      return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    }
+
+    function render() {
+      const start = page * PAGE_SIZE;
+      const slice = filtered.slice(start, start + PAGE_SIZE);
+
+      document.getElementById("rows").innerHTML = slice
+        .map((t, i) => {
+          const rank = start + i + 1;
+          const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
+          return `<tr class="hover:bg-neutral-900/80">
+            <td class="text-neutral-500">${rank}</td>
+            <td>
+              <div class="token-cell">
+                ${tokenLogo(t)}
+                <div class="min-w-0">
+                  <div class="font-semibold text-white inline-flex items-center max-w-full">
+                    <span class="truncate">${t.symbol || "???"}</span>
+                    <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
+                  </div>
+                  <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
+                </div>
+              </div>
+            </td>
+            <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
+            <td>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
+            <td>${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
+            <td>${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
+            <td>${fmtUsd(t.fdv)}</td>
+            <td>${fmtUsd(t.volume_24h)}</td>
+            <td>${fmtPrice(t.price)}</td>
+            <td><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
+          </tr>`;
+        })
+        .join("");
+
+      const from = filtered.length ? start + 1 : 0;
+      const to = Math.min(start + PAGE_SIZE, filtered.length);
+      document.getElementById("page-info").textContent =
+        filtered.length
+          ? `${from}–${to} of ${filtered.length}`
+          : "No results";
+
+      document.getElementById("prev").disabled = page <= 0;
+      document.getElementById("next").disabled = page >= totalPages() - 1;
+    }
+
+    function applySearch() {
+      const q = (document.getElementById("search").value || "").trim().toLowerCase();
+      if (!q) filtered = allTokens.slice();
+      else {
+        filtered = allTokens.filter((t) =>
+          (t.symbol || "").toLowerCase().includes(q) ||
+          (t.name || "").toLowerCase().includes(q) ||
+          (t.token || "").toLowerCase().includes(q)
+        );
+      }
+      page = 0;
+      render();
+    }
+
+    async function load() {
+      const res = await fetch("./data.json?t=" + Date.now());
+      const data = await res.json();
+      allTokens = data.tokens || [];
+      filtered = allTokens.slice();
+      page = 0;
+      render();
+    }
+
+    document.getElementById("search").addEventListener("input", applySearch);
+    document.getElementById("prev").addEventListener("click", () => {
+      if (page > 0) { page--; render(); }
+    });
+    document.getElementById("next").addEventListener("click", () => {
+      if (page < totalPages() - 1) { page++; render(); }
+    });
+
+    load().catch((e) => console.error(e));
+  </script>
+</body>
+</html>
