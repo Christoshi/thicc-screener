@@ -18,8 +18,9 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      padding: 0.5rem 0.4rem;
+      padding: 0.55rem 0.6rem;
       vertical-align: middle;
+      text-align: left;
     }
     .token-cell {
       display: flex;
@@ -48,21 +49,53 @@
     }
     .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; flex-shrink: 0; }
     .copy-btn:hover { opacity: 1; }
+    #search {
+      background: #171717;
+      border: 1px solid #333;
+      color: #e5e5e5;
+      border-radius: 9999px;
+      padding: 0.4rem 0.9rem 0.4rem 2rem;
+      font-size: 0.875rem;
+      width: 200px;
+      outline: none;
+    }
+    #search:focus { border-color: #34d399; }
+    .search-wrap { position: relative; }
+    .search-wrap svg {
+      position: absolute;
+      left: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: #737373;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
   <div class="max-w-[1400px] mx-auto">
-    <h1 class="text-2xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
-    <p class="text-sm text-neutral-400 mb-4">
-      pools.trade · ranked by LP Value ·
-      <span id="updated">loading…</span>
-    </p>
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+      <div>
+        <h1 class="text-2xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
+        <p class="text-sm text-neutral-400">
+          pools.trade · ranked by LP Value ·
+          <span id="updated">loading…</span>
+        </p>
+      </div>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+        </svg>
+        <input id="search" type="search" placeholder="Search any token" autocomplete="off" />
+      </div>
+    </div>
 
     <div class="overflow-x-auto rounded-lg border border-neutral-800">
-      <table class="text-sm text-left">
+      <table class="text-sm">
         <colgroup>
           <col style="width:4%" />
-          <col style="width:18%" />
+          <col style="width:16%" />
           <col style="width:10%" />
           <col style="width:11%" />
           <col style="width:11%" />
@@ -70,19 +103,19 @@
           <col style="width:10%" />
           <col style="width:10%" />
           <col style="width:10%" />
-          <col style="width:5%" />
+          <col style="width:7%" />
         </colgroup>
-        <thead class="bg-neutral-900 text-neutral-400 uppercase text-xs">
+        <thead class="bg-neutral-900 text-neutral-400 text-xs">
           <tr>
             <th>#</th>
             <th>Token</th>
-            <th class="text-right">LP Value</th>
-            <th class="text-right">24h</th>
-            <th class="text-right">7d</th>
-            <th class="text-right">30d</th>
-            <th class="text-right">FDV</th>
-            <th class="text-right">Volume</th>
-            <th class="text-right">Price</th>
+            <th>LP Value</th>
+            <th>24h</th>
+            <th>7d</th>
+            <th>30d</th>
+            <th>Fdv</th>
+            <th>Volume</th>
+            <th>Price</th>
             <th>Trade</th>
           </tr>
         </thead>
@@ -94,6 +127,8 @@
   <script>
     const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
     const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
+
+    let allTokens = [];
 
     const fmtUsd = (n) => {
       if (n == null || n === "" || Number.isNaN(Number(n))) return "—";
@@ -140,16 +175,11 @@
     }
     window.copyCA = copyCA;
 
-    async function load() {
-      const res = await fetch("./data.json?t=" + Date.now());
-      const data = await res.json();
-      document.getElementById("updated").textContent =
-        "updated " + new Date(data.updated).toLocaleString();
-
-      document.getElementById("rows").innerHTML = data.tokens
+    function render(tokens) {
+      document.getElementById("rows").innerHTML = tokens
         .map((t, i) => {
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
-          return `<tr class="hover:bg-neutral-900/80">
+          return `<tr class="hover:bg-neutral-900/80" data-q="${(t.symbol + " " + t.name + " " + t.token).toLowerCase()}">
             <td class="text-neutral-500">${i + 1}</td>
             <td>
               <div class="token-cell">
@@ -163,18 +193,43 @@
                 </div>
               </div>
             </td>
-            <td class="text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
-            <td class="text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
-            <td class="text-right">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
-            <td class="text-right">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
-            <td class="text-right">${fmtUsd(t.fdv)}</td>
-            <td class="text-right">${fmtUsd(t.volume_24h)}</td>
-            <td class="text-right">${fmtPrice(t.price)}</td>
+            <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
+            <td>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
+            <td>${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
+            <td>${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
+            <td>${fmtUsd(t.fdv)}</td>
+            <td>${fmtUsd(t.volume_24h)}</td>
+            <td>${fmtPrice(t.price)}</td>
             <td><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
           </tr>`;
         })
         .join("");
     }
+
+    function applySearch() {
+      const q = (document.getElementById("search").value || "").trim().toLowerCase();
+      if (!q) {
+        render(allTokens);
+        return;
+      }
+      const filtered = allTokens.filter((t) =>
+        (t.symbol || "").toLowerCase().includes(q) ||
+        (t.name || "").toLowerCase().includes(q) ||
+        (t.token || "").toLowerCase().includes(q)
+      );
+      render(filtered);
+    }
+
+    async function load() {
+      const res = await fetch("./data.json?t=" + Date.now());
+      const data = await res.json();
+      document.getElementById("updated").textContent =
+        "updated " + new Date(data.updated).toLocaleString();
+      allTokens = data.tokens || [];
+      render(allTokens);
+    }
+
+    document.getElementById("search").addEventListener("input", applySearch);
     load().catch((e) => {
       document.getElementById("updated").textContent = "error loading data";
       console.error(e);
