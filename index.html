@@ -10,22 +10,12 @@
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
     table { font-variant-numeric: tabular-nums; }
-    .copy-btn {
-      opacity: 0.45;
-      transition: opacity 0.15s, color 0.15s;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2px;
-      border-radius: 4px;
-    }
-    .copy-btn:hover { opacity: 1; color: #fff; }
-    .copy-btn.copied { opacity: 1; color: #4ade80; }
+    .copy-btn { opacity: 0.45; cursor: pointer; vertical-align: middle; }
+    .copy-btn:hover { opacity: 1; }
   </style>
 </head>
 <body class="min-h-screen p-4 md:p-8">
-  <div class="max-w-[1400px] mx-auto">
+  <div class="max-w-[1600px] mx-auto">
     <h1 class="text-3xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
     <p class="text-sm text-neutral-400 mb-6">
       pools.trade · ranked by LP Value ·
@@ -39,9 +29,11 @@
             <th class="px-3 py-3">#</th>
             <th class="px-3 py-3">Token</th>
             <th class="px-3 py-3 text-right">LP Value</th>
-            <th class="px-3 py-3 text-right">24h LP</th>
-            <th class="px-3 py-3 text-right">7d LP</th>
-            <th class="px-3 py-3 text-right">30d LP</th>
+            <th class="px-3 py-3 text-right">ETH side</th>
+            <th class="px-3 py-3 text-right">Token side</th>
+            <th class="px-3 py-3 text-right">24h</th>
+            <th class="px-3 py-3 text-right">7d</th>
+            <th class="px-3 py-3 text-right">30d</th>
             <th class="px-3 py-3 text-right">FDV</th>
             <th class="px-3 py-3 text-right">Volume</th>
             <th class="px-3 py-3 text-right">Price</th>
@@ -54,8 +46,11 @@
   </div>
 
   <script>
+    const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
+    const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
+
     const fmtUsd = (n) => {
-      if (n == null || n === "" || Number.isNaN(n)) return "—";
+      if (n == null || n === "" || Number.isNaN(Number(n))) return "—";
       const x = Number(n);
       if (Math.abs(x) >= 1e6) return "$" + (x / 1e6).toFixed(2) + "M";
       if (Math.abs(x) >= 1e3) return "$" + (x / 1e3).toFixed(1) + "k";
@@ -65,46 +60,34 @@
     };
 
     const fmtPrice = (n) => {
-      if (n == null || n === "" || Number.isNaN(n)) return "—";
+      if (n == null || Number.isNaN(Number(n))) return "—";
       const x = Number(n);
-      if (x === 0) return "$0";
-      if (x >= 1) return "$" + x.toFixed(2);
-      if (x >= 0.01) return "$" + x.toFixed(4);
+      if (x >= 1) return "$" + x.toFixed(4);
       if (x >= 0.0001) return "$" + x.toFixed(6);
-      if (x >= 0.000001) return "$" + x.toFixed(8);
-      return "$" + x.toFixed(10).replace(/\.?0+$/, "");
+      if (x >= 1e-8) return "$" + x.toFixed(10);
+      return "$" + x.toFixed(12);
     };
 
     const fmtChange = (usd, pct) => {
       if (usd == null && pct == null) return "—";
-      const cls = (pct ?? usd) > 0 ? "pos" : (pct ?? usd) < 0 ? "neg" : "";
-      const p = pct != null ? (pct > 0 ? "+" : "") + pct.toFixed(1) + "%" : "";
-      const u = usd != null ? fmtUsd(usd) : "";
-      return `<span class="${cls}">${u}${p ? " (" + p + ")" : ""}</span>`;
+      const cls = (usd ?? pct) >= 0 ? "pos" : "neg";
+      const sign = (usd ?? 0) >= 0 ? "+" : "";
+      const u = usd != null ? sign + fmtUsd(usd).replace("$", "$") : "";
+      const p = pct != null ? ` (${sign}${pct.toFixed(1)}%)` : "";
+      return `<span class="${cls}">${u}${p}</span>`;
     };
 
-    const COPY_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-    </svg>`;
-
-    const CHECK_ICON = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <polyline points="20 6 9 17 4 12"></polyline>
-    </svg>`;
-
-    function copyCA(addr, btn) {
+    function copyCA(addr, el) {
       navigator.clipboard.writeText(addr).then(() => {
-        btn.innerHTML = CHECK_ICON;
-        btn.classList.add("copied");
-        setTimeout(() => {
-          btn.innerHTML = COPY_ICON;
-          btn.classList.remove("copied");
-        }, 1200);
+        const prev = el.innerHTML;
+        el.innerHTML = CHECK_ICON;
+        setTimeout(() => { el.innerHTML = prev; }, 1200);
       });
     }
+    window.copyCA = copyCA;
 
     async function load() {
-      const res = await fetch("/thicc-screener/data.json?t=" + Date.now());
+      const res = await fetch("./data.json?t=" + Date.now());
       const data = await res.json();
       document.getElementById("updated").textContent =
         "updated " + new Date(data.updated).toLocaleString();
@@ -116,15 +99,15 @@
           return `<tr class="hover:bg-neutral-900/80">
             <td class="px-3 py-2 text-neutral-500">${i + 1}</td>
             <td class="px-3 py-2">
-              <div class="flex items-center gap-2">
-                <div>
-                  <div class="font-semibold text-white">${t.symbol || "???"}</div>
-                  <div class="text-xs text-neutral-500">${t.name || ""}</div>
-                </div>
-                ${t.token ? `<button class="copy-btn text-neutral-400" onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</button>` : ""}
+              <div class="font-semibold text-white inline-flex items-center">
+                ${t.symbol || "???"}
+                <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
               </div>
+              <div class="text-xs text-neutral-500">${t.name || ""}</div>
             </td>
             <td class="px-3 py-2 text-right font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
+            <td class="px-3 py-2 text-right">${fmtUsd(t.eth_side)}</td>
+            <td class="px-3 py-2 text-right">${fmtUsd(t.token_side)}</td>
             <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
             <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
             <td class="px-3 py-2 text-right">${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
