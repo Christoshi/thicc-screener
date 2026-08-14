@@ -6,7 +6,7 @@
   <title>THICC Screener</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background: #0a0a0a; color: #e5e5e5; }
+    body { background: #0a0a0a; color: #e5e5e5; margin: 0; }
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
     table {
@@ -71,16 +71,59 @@
       color: #737373;
       pointer-events: none;
     }
+    .topnav {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      flex-wrap: wrap;
+      padding: 0.65rem 1rem;
+      background: #0d0d0d;
+      border-bottom: 1px solid #1f1f1f;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .topnav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      color: #d4d4d4;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    .topnav a:hover { background: #1a1a1a; color: #fff; }
+    .topnav .brand {
+      font-weight: 700;
+      color: #34d399;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      margin-right: 0.5rem;
+    }
+    .topnav .brand:hover { color: #6ee7b7; background: transparent; }
   </style>
 </head>
-<body class="min-h-screen p-4 md:p-6">
-  <div class="max-w-[1400px] mx-auto">
-    <div class="flex flex-wrap items-end justify-between gap-3 mb-4">
+<body>
+  <nav class="topnav">
+    <a class="brand" href="./">
+      <img src="logo.png" alt="THICC" width="28" height="28" style="border-radius:6px" />
+      ThiccScreener
+    </a>
+    <a href="https://pools.trade/t/0xE72936b1fE4cc0a521aE82bb9239F28f3FdB1C5D" target="_blank" rel="noopener">Buy THICC</a>
+    <a href="https://dexscreener.com/robinhood/0xE72936b1fE4cc0a521aE82bb9239F28f3FdB1C5D" target="_blank" rel="noopener">THICC Chart</a>
+    <a href="https://t.me/THICCcommunity" target="_blank" rel="noopener">Join TG</a>
+  </nav>
+
+  <div class="max-w-[1400px] mx-auto p-4 md:p-6" style="padding-top: 2.5rem;">
+    <div class="flex flex-wrap items-end justify-between gap-3 mb-8">
       <div>
         <h1 class="text-2xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
         <p class="text-sm text-neutral-400">
-          pools.trade · ranked by LP Value ·
-          <span id="updated">loading…</span>
+          Discover the top 1,000 tokens on
+          <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
+          ranked by LP value
         </p>
       </div>
       <div class="search-wrap">
@@ -179,7 +222,7 @@
       document.getElementById("rows").innerHTML = tokens
         .map((t, i) => {
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
-          return `<tr class="hover:bg-neutral-900/80" data-q="${(t.symbol + " " + t.name + " " + t.token).toLowerCase()}">
+          return `<tr class="hover:bg-neutral-900/80">
             <td class="text-neutral-500">${i + 1}</td>
             <td>
               <div class="token-cell">
@@ -208,30 +251,23 @@
 
     function applySearch() {
       const q = (document.getElementById("search").value || "").trim().toLowerCase();
-      if (!q) {
-        render(allTokens);
-        return;
-      }
-      const filtered = allTokens.filter((t) =>
+      if (!q) { render(allTokens); return; }
+      render(allTokens.filter((t) =>
         (t.symbol || "").toLowerCase().includes(q) ||
         (t.name || "").toLowerCase().includes(q) ||
         (t.token || "").toLowerCase().includes(q)
-      );
-      render(filtered);
+      ));
     }
 
     async function load() {
       const res = await fetch("./data.json?t=" + Date.now());
       const data = await res.json();
-      document.getElementById("updated").textContent =
-        "updated " + new Date(data.updated).toLocaleString();
       allTokens = data.tokens || [];
       render(allTokens);
     }
 
     document.getElementById("search").addEventListener("input", applySearch);
     load().catch((e) => {
-      document.getElementById("updated").textContent = "error loading data";
       console.error(e);
     });
   </script>
