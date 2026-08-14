@@ -22,11 +22,11 @@ const TOPIC_TOKEN_LAUNCHED =
 
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 
-// First useful history (adjust if needed). Backfill walks from here → tip.
-const START_BLOCK = 1;
-// Budget per GitHub Actions run (tune if rate-limited / timeouts)
+// First launchpad deploy block (0x23f82095…)
+const START_BLOCK = 28519960;
+// Budget per GitHub Actions run
 const BLOCKS_PER_RUN = 80_000;
-const ENRICH_CAP = 60; // max getLaunchByAddress calls per run
+const ENRICH_CAP = 60;
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -100,10 +100,9 @@ function decodeTokenLaunched(log) {
 async function fetchLogsForRange(fromBlock, toBlock) {
   const found = [];
   for (const addr of LAUNCHPADS) {
-    // Split into smaller sub-ranges if needed (1000 log cap)
     let start = fromBlock;
     while (start <= toBlock) {
-      const end = Math.min(start + 15_000 - 1, toBlock); // modest span per request
+      const end = Math.min(start + 15_000 - 1, toBlock);
       const url =
         `${BLOCKSCOUT}?module=logs&action=getLogs` +
         `&fromBlock=${start}&toBlock=${end}` +
@@ -131,11 +130,18 @@ async function fetchLogsForRange(fromBlock, toBlock) {
 async function loadLaunchesState() {
   try {
     const raw = await fs.readFile(LAUNCHES_PATH, "utf-8");
-    return JSON.parse(raw);
+    const s = JSON.parse(raw);
+    // migrate old start if needed
+    if (!s.startBlock || s.startBlock < START_BLOCK) s.startBlock = START_BLOCK;
+    if (s.lastScannedBlock > 0 && s.lastScannedBlock < START_BLOCK - 1) {
+      s.lastScannedBlock = START_BLOCK - 1;
+      s.backfillDone = false;
+    }
+    return s;
   } catch {
     return {
       backfillDone: false,
-      lastScannedBlock: 0,
+      lastScannedBlock: START_BLOCK - 1,
       startBlock: START_BLOCK,
       tokens: {},
     };
@@ -164,7 +170,6 @@ function closestLp(byToken, token, targetTs) {
       best = r.lp_value;
     }
   }
-  // accept snapshot within ±12h of target
   if (best == null || bestDiff > 12 * 3600e3) return null;
   return best;
 }
@@ -192,7 +197,7 @@ async function main() {
   }
 
   if (latest > 0) {
-    if (!state.lastScannedBlock || state.lastScannedBlock < state.startBlock) {
+    if (!state.lastScannedBlock || state.lastScannedBlock < state.startBlock - 1) {
       state.lastScannedBlock = state.startBlock - 1;
     }
 
@@ -285,7 +290,6 @@ async function main() {
     return !existing || existing.lp_value <= 0;
   });
 
-  // Prefer more recent launches first
   needEnrich.sort((a, b) => {
     const ba = state.tokens[a]?.blockNumber || 0;
     const bb = state.tokens[b]?.blockNumber || 0;
