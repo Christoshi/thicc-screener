@@ -23,13 +23,13 @@ const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
-const SIDE_CAP = 120; // top N for ETH/Token side RPC reads
+const SIDE_CAP = 120;
 
 const RPC = "https://rpc.mainnet.chain.robinhood.com";
 const STATE_VIEW = "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b";
-// getSlot0(bytes32) / getLiquidity(bytes32)
-const SEL_SLOT0 = "0x3850c7bd";
-const SEL_LIQ = "0x1a686502";
+// Correct selectors from verified StateView on Robinhood
+const SEL_SLOT0 = "0xc815641c"; // getSlot0(bytes32)
+const SEL_LIQ = "0xfa6793d5"; // getLiquidity(bytes32)
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -204,13 +204,10 @@ function pad32(hex) {
   return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
 }
 
-/** Active in-range virtual amounts from L + sqrtPriceX96 (v3-style). */
 function virtualAmounts(liquidity, sqrtPriceX96) {
-  if (!liquidity || !sqrtPriceX96 || sqrtPriceX96 === 0n) {
+  if (!liquidity || liquidity === 0n || !sqrtPriceX96 || sqrtPriceX96 === 0n) {
     return { amount0: 0, amount1: 0 };
   }
-  // amount0 = L * Q96 / sqrtP
-  // amount1 = L * sqrtP / Q96
   const Q96 = 2n ** 96n;
   const amount0 = (liquidity * Q96) / sqrtPriceX96;
   const amount1 = (liquidity * sqrtPriceX96) / Q96;
@@ -230,32 +227,28 @@ async function fillSides(tokens, ethUsd) {
         rpcCall(STATE_VIEW, SEL_SLOT0 + pid),
         rpcCall(STATE_VIEW, SEL_LIQ + pid),
       ]);
-      if (!slotRaw || slotRaw === "0x" || !liqRaw) continue;
+      if (!slotRaw || slotRaw.length < 66 || !liqRaw || liqRaw === "0x") continue;
 
-      // slot0: sqrtPriceX96 (uint160) in first 32 bytes
+      // ABI: (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)
       const sqrtPriceX96 = BigInt("0x" + slotRaw.slice(2, 66));
       const liquidity = BigInt(liqRaw);
       const { amount0, amount1 } = virtualAmounts(liquidity, sqrtPriceX96);
 
-      // currency0 = native ETH, currency1 = token (pools.trade)
       let ethUsdSide = amount0 * ethUsd;
       let tokUsdSide = amount1 * (t.price || 0);
-
-      // Scale to match tRPC lp_value so columns sum sensibly
       const sum = ethUsdSide + tokUsdSide;
       if (sum > 0 && t.lp_value > 0) {
         const scale = t.lp_value / sum;
         ethUsdSide *= scale;
         tokUsdSide *= scale;
       }
-
       if (ethUsdSide > 0 || tokUsdSide > 0) {
         t.eth_side = +ethUsdSide.toFixed(2);
         t.token_side = +tokUsdSide.toFixed(2);
         filled++;
       }
       await new Promise((r) => setTimeout(r, 40));
-    } catch {
+    } catch (e) {
       // keep null
     }
   }
@@ -265,7 +258,6 @@ async function fillSides(tokens, ethUsd) {
 async function main() {
   await fs.mkdir("data", { recursive: true });
 
-  // ── 1. Blockscout backfill / incremental (unchanged) ────────────
   const state = await loadLaunchesState();
   let latest = 0;
   try {
@@ -321,7 +313,6 @@ async function main() {
   const launchTokens = Object.keys(state.tokens);
   console.log("Known launches in launches.json:", launchTokens.length);
 
-  // ── 2. tRPC lists ───────────────────────────────────────────────
   const map = new Map();
 
   async function pullList(sortBy) {
@@ -360,7 +351,6 @@ async function main() {
     console.log("  cca skip:", e.message);
   }
 
-  // ── 3. Enrich missing launches ──────────────────────────────────
   const needEnrich = launchTokens.filter((t) => {
     const existing = map.get(t);
     return !existing || existing.lp_value <= 0;
@@ -382,7 +372,6 @@ async function main() {
     }
   }
 
-  // ── 4. Rank ─────────────────────────────────────────────────────
   const ranked = [...map.values()]
     .filter((t) => t.lp_value > 0 || t.fdv > 0)
     .sort((a, b) => b.lp_value - a.lp_value)
@@ -391,7 +380,6 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  // ── 5. ETH / Token side via StateView (does NOT touch backfill) ─
   let ethUsd = 0;
   for (const t of ranked) {
     if (t.price > 0 && t.price_eth > 0) {
@@ -406,7 +394,6 @@ async function main() {
     console.log("No ETH price; skip sides");
   }
 
-  // ── 6. History ──────────────────────────────────────────────────
   const now = Date.now();
   let history = await loadHistory();
   for (const t of ranked) {
@@ -436,7 +423,7 @@ async function main() {
     t.lp_change_7d_pct = pctChange(t.lp_value, lp7);
     t.lp_change_30d = dollarChange(t.lp_value, lp30);
     t.lp_change_30d_pct = pctChange(t.lp_value, lp30);
-    delete t.price_eth; // internal only
+    delete t.price_eth;
   }
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
