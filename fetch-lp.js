@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade: full TokenLaunched backfill (resumable) + tRPC stats
+// fetch-lp.js — pools.trade backfill + tRPC + StateView ETH/Token sides
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -10,7 +10,6 @@ const MS_24H = 24 * 60 * 60 * 1000;
 const MS_7D = 7 * MS_24H;
 const MS_30D = 30 * MS_24H;
 
-// Official pools.trade launchpads only
 const LAUNCHPADS = [
   "0x23f8209572b4a1c2ad88a42749e830791fb027f1",
   "0xad44d55e7f8337c3ce113fbb591486e85be104b2",
@@ -21,12 +20,16 @@ const TOPIC_TOKEN_LAUNCHED =
   "0x3b3d2bafdcae274a232217e1f80ee4305d3af6aa25c8b14b1681bd68d18042a4";
 
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
-
-// First launchpad deploy block (0x23f82095…)
 const START_BLOCK = 28519960;
-// Budget per GitHub Actions run
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
+const SIDE_CAP = 120; // top N for ETH/Token side RPC reads
+
+const RPC = "https://rpc.mainnet.chain.robinhood.com";
+const STATE_VIEW = "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b";
+// getSlot0(bytes32) / getLiquidity(bytes32)
+const SEL_SLOT0 = "0x3850c7bd";
+const SEL_LIQ = "0x1a686502";
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -46,6 +49,7 @@ function mapLaunch(l, source) {
   const stats = l.poolStats || {};
   const lp = Number(stats.liquidityUsd ?? l.liquidityUsd ?? 0);
   const price = Number(stats.priceUsd ?? l.clearingPriceUsd ?? l.priceUsd ?? 0);
+  const priceEth = Number(stats.priceEth ?? 0);
   const vol = Number(stats.volume24hUsd ?? l.volume24hUsd ?? 0);
   const fdv = Number(l.fdvUsd ?? (price > 0 ? price * 1e9 : 0));
   const token = (l.tokenAddress || l.token || "").toLowerCase();
@@ -58,9 +62,12 @@ function mapLaunch(l, source) {
     source,
     status: l.status || "",
     lp_value: +lp.toFixed(2),
+    eth_side: null,
+    token_side: null,
     fdv: +fdv.toFixed(2),
     volume_24h: +vol.toFixed(2),
     price,
+    price_eth: priceEth,
     holders: l.holderCount ?? null,
     created_at: l.createdAt || l.graduatedAt || l.startsAt || null,
   };
@@ -89,12 +96,7 @@ function decodeTokenLaunched(log) {
     typeof log.blockNumber === "string" && log.blockNumber.startsWith("0x")
       ? parseInt(log.blockNumber, 16)
       : Number(log.blockNumber) || 0;
-  return {
-    token,
-    poolId,
-    blockNumber: bn,
-    txHash: log.transactionHash || null,
-  };
+  return { token, poolId, blockNumber: bn, txHash: log.transactionHash || null };
 }
 
 async function fetchLogsForRange(fromBlock, toBlock) {
@@ -131,7 +133,6 @@ async function loadLaunchesState() {
   try {
     const raw = await fs.readFile(LAUNCHES_PATH, "utf-8");
     const s = JSON.parse(raw);
-    // migrate old start if needed
     if (!s.startBlock || s.startBlock < START_BLOCK) s.startBlock = START_BLOCK;
     if (s.lastScannedBlock > 0 && s.lastScannedBlock < START_BLOCK - 1) {
       s.lastScannedBlock = START_BLOCK - 1;
@@ -183,10 +184,88 @@ function pctChange(now, then) {
   return +(((now - then) / then) * 100).toFixed(2);
 }
 
+async function rpcCall(to, data) {
+  const res = await fetch(RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "eth_call",
+      params: [{ to, data }, "latest"],
+    }),
+  });
+  const json = await res.json();
+  if (json.error) throw new Error(json.error.message || "rpc error");
+  return json.result;
+}
+
+function pad32(hex) {
+  return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
+}
+
+/** Active in-range virtual amounts from L + sqrtPriceX96 (v3-style). */
+function virtualAmounts(liquidity, sqrtPriceX96) {
+  if (!liquidity || !sqrtPriceX96 || sqrtPriceX96 === 0n) {
+    return { amount0: 0, amount1: 0 };
+  }
+  // amount0 = L * Q96 / sqrtP
+  // amount1 = L * sqrtP / Q96
+  const Q96 = 2n ** 96n;
+  const amount0 = (liquidity * Q96) / sqrtPriceX96;
+  const amount1 = (liquidity * sqrtPriceX96) / Q96;
+  return {
+    amount0: Number(amount0) / 1e18,
+    amount1: Number(amount1) / 1e18,
+  };
+}
+
+async function fillSides(tokens, ethUsd) {
+  let filled = 0;
+  for (const t of tokens.slice(0, SIDE_CAP)) {
+    if (!t.pool_id || t.lp_value <= 0) continue;
+    try {
+      const pid = pad32(t.pool_id);
+      const [slotRaw, liqRaw] = await Promise.all([
+        rpcCall(STATE_VIEW, SEL_SLOT0 + pid),
+        rpcCall(STATE_VIEW, SEL_LIQ + pid),
+      ]);
+      if (!slotRaw || slotRaw === "0x" || !liqRaw) continue;
+
+      // slot0: sqrtPriceX96 (uint160) in first 32 bytes
+      const sqrtPriceX96 = BigInt("0x" + slotRaw.slice(2, 66));
+      const liquidity = BigInt(liqRaw);
+      const { amount0, amount1 } = virtualAmounts(liquidity, sqrtPriceX96);
+
+      // currency0 = native ETH, currency1 = token (pools.trade)
+      let ethUsdSide = amount0 * ethUsd;
+      let tokUsdSide = amount1 * (t.price || 0);
+
+      // Scale to match tRPC lp_value so columns sum sensibly
+      const sum = ethUsdSide + tokUsdSide;
+      if (sum > 0 && t.lp_value > 0) {
+        const scale = t.lp_value / sum;
+        ethUsdSide *= scale;
+        tokUsdSide *= scale;
+      }
+
+      if (ethUsdSide > 0 || tokUsdSide > 0) {
+        t.eth_side = +ethUsdSide.toFixed(2);
+        t.token_side = +tokUsdSide.toFixed(2);
+        filled++;
+      }
+      await new Promise((r) => setTimeout(r, 40));
+    } catch {
+      // keep null
+    }
+  }
+  console.log("ETH/Token sides filled:", filled);
+}
+
 async function main() {
   await fs.mkdir("data", { recursive: true });
 
-  // ── 1. Blockscout: resume backfill or incremental ───────────────
+  // ── 1. Blockscout backfill / incremental (unchanged) ────────────
   const state = await loadLaunchesState();
   let latest = 0;
   try {
@@ -200,7 +279,6 @@ async function main() {
     if (!state.lastScannedBlock || state.lastScannedBlock < state.startBlock - 1) {
       state.lastScannedBlock = state.startBlock - 1;
     }
-
     const fromBlock = state.lastScannedBlock + 1;
     const toBlock = Math.min(fromBlock + BLOCKS_PER_RUN - 1, latest);
 
@@ -225,7 +303,6 @@ async function main() {
       }
       console.log("  new tokens:", added);
       state.lastScannedBlock = toBlock;
-
       if (!state.backfillDone && state.lastScannedBlock >= latest - 100) {
         state.backfillDone = true;
         console.log("Backfill complete.");
@@ -237,7 +314,6 @@ async function main() {
         ).toFixed(2);
         console.log(`Backfill progress ~${pct}% (cursor ${state.lastScannedBlock})`);
       }
-
       await fs.writeFile(LAUNCHES_PATH, JSON.stringify(state, null, 2));
     }
   }
@@ -245,7 +321,7 @@ async function main() {
   const launchTokens = Object.keys(state.tokens);
   console.log("Known launches in launches.json:", launchTokens.length);
 
-  // ── 2. tRPC bulk lists ──────────────────────────────────────────
+  // ── 2. tRPC lists ───────────────────────────────────────────────
   const map = new Map();
 
   async function pullList(sortBy) {
@@ -284,29 +360,25 @@ async function main() {
     console.log("  cca skip:", e.message);
   }
 
-  // ── 3. Enrich launches missing from tRPC top slices ─────────────
+  // ── 3. Enrich missing launches ──────────────────────────────────
   const needEnrich = launchTokens.filter((t) => {
     const existing = map.get(t);
     return !existing || existing.lp_value <= 0;
   });
-
-  needEnrich.sort((a, b) => {
-    const ba = state.tokens[a]?.blockNumber || 0;
-    const bb = state.tokens[b]?.blockNumber || 0;
-    return bb - ba;
-  });
+  needEnrich.sort(
+    (a, b) =>
+      (state.tokens[b]?.blockNumber || 0) - (state.tokens[a]?.blockNumber || 0)
+  );
 
   console.log("Enrich candidates:", needEnrich.length, "→ cap", ENRICH_CAP);
   for (const token of needEnrich.slice(0, ENRICH_CAP)) {
     try {
       const data = await trpc("curve.getLaunchByAddress", { tokenAddress: token });
       const m = mapLaunch(data, "curve");
-      if (m && (m.lp_value > 0 || m.fdv > 0)) {
-        map.set(m.token, m);
-      }
+      if (m && (m.lp_value > 0 || m.fdv > 0)) map.set(m.token, m);
       await new Promise((r) => setTimeout(r, 120));
     } catch {
-      // not found / CCA-only / rate limit
+      /* skip */
     }
   }
 
@@ -319,7 +391,22 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  // ── 5. History / LP change ──────────────────────────────────────
+  // ── 5. ETH / Token side via StateView (does NOT touch backfill) ─
+  let ethUsd = 0;
+  for (const t of ranked) {
+    if (t.price > 0 && t.price_eth > 0) {
+      ethUsd = t.price / t.price_eth;
+      break;
+    }
+  }
+  if (ethUsd > 0) {
+    console.log("ETH USD ~", ethUsd.toFixed(2));
+    await fillSides(ranked, ethUsd);
+  } else {
+    console.log("No ETH price; skip sides");
+  }
+
+  // ── 6. History ──────────────────────────────────────────────────
   const now = Date.now();
   let history = await loadHistory();
   for (const t of ranked) {
@@ -349,6 +436,7 @@ async function main() {
     t.lp_change_7d_pct = pctChange(t.lp_value, lp7);
     t.lp_change_30d = dollarChange(t.lp_value, lp30);
     t.lp_change_30d_pct = pctChange(t.lp_value, lp30);
+    delete t.price_eth; // internal only
   }
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
