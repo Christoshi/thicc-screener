@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade backfill + tRPC + StateView ETH/Token sides
+// fetch-lp.js — pools.trade backfill + tRPC stats (no fake sides)
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -23,13 +23,6 @@ const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
-const SIDE_CAP = 120;
-
-const RPC = "https://rpc.mainnet.chain.robinhood.com";
-const STATE_VIEW = "0xf3334192d15450cdd385c8b70e03f9a6bd9e673b";
-// Correct selectors from verified StateView on Robinhood
-const SEL_SLOT0 = "0xc815641c"; // getSlot0(bytes32)
-const SEL_LIQ = "0xfa6793d5"; // getLiquidity(bytes32)
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -49,7 +42,6 @@ function mapLaunch(l, source) {
   const stats = l.poolStats || {};
   const lp = Number(stats.liquidityUsd ?? l.liquidityUsd ?? 0);
   const price = Number(stats.priceUsd ?? l.clearingPriceUsd ?? l.priceUsd ?? 0);
-  const priceEth = Number(stats.priceEth ?? 0);
   const vol = Number(stats.volume24hUsd ?? l.volume24hUsd ?? 0);
   const fdv = Number(l.fdvUsd ?? (price > 0 ? price * 1e9 : 0));
   const token = (l.tokenAddress || l.token || "").toLowerCase();
@@ -58,16 +50,15 @@ function mapLaunch(l, source) {
     token,
     symbol: l.tokenSymbol || "???",
     name: l.tokenName || "",
+    image: l.imageUrl || null,
+    emoji: l.imageEmoji || null,
     pool_id: l.poolId || l.poolKeyHash || null,
     source,
     status: l.status || "",
     lp_value: +lp.toFixed(2),
-    eth_side: null,
-    token_side: null,
     fdv: +fdv.toFixed(2),
     volume_24h: +vol.toFixed(2),
     price,
-    price_eth: priceEth,
     holders: l.holderCount ?? null,
     created_at: l.createdAt || l.graduatedAt || l.startsAt || null,
   };
@@ -182,77 +173,6 @@ function dollarChange(now, then) {
 function pctChange(now, then) {
   if (then == null || then === 0 || now == null) return null;
   return +(((now - then) / then) * 100).toFixed(2);
-}
-
-async function rpcCall(to, data) {
-  const res = await fetch(RPC, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: 1,
-      method: "eth_call",
-      params: [{ to, data }, "latest"],
-    }),
-  });
-  const json = await res.json();
-  if (json.error) throw new Error(json.error.message || "rpc error");
-  return json.result;
-}
-
-function pad32(hex) {
-  return hex.replace(/^0x/, "").toLowerCase().padStart(64, "0");
-}
-
-function virtualAmounts(liquidity, sqrtPriceX96) {
-  if (!liquidity || liquidity === 0n || !sqrtPriceX96 || sqrtPriceX96 === 0n) {
-    return { amount0: 0, amount1: 0 };
-  }
-  const Q96 = 2n ** 96n;
-  const amount0 = (liquidity * Q96) / sqrtPriceX96;
-  const amount1 = (liquidity * sqrtPriceX96) / Q96;
-  return {
-    amount0: Number(amount0) / 1e18,
-    amount1: Number(amount1) / 1e18,
-  };
-}
-
-async function fillSides(tokens, ethUsd) {
-  let filled = 0;
-  for (const t of tokens.slice(0, SIDE_CAP)) {
-    if (!t.pool_id || t.lp_value <= 0) continue;
-    try {
-      const pid = pad32(t.pool_id);
-      const [slotRaw, liqRaw] = await Promise.all([
-        rpcCall(STATE_VIEW, SEL_SLOT0 + pid),
-        rpcCall(STATE_VIEW, SEL_LIQ + pid),
-      ]);
-      if (!slotRaw || slotRaw.length < 66 || !liqRaw || liqRaw === "0x") continue;
-
-      // ABI: (uint160 sqrtPriceX96, int24 tick, uint24 protocolFee, uint24 lpFee)
-      const sqrtPriceX96 = BigInt("0x" + slotRaw.slice(2, 66));
-      const liquidity = BigInt(liqRaw);
-      const { amount0, amount1 } = virtualAmounts(liquidity, sqrtPriceX96);
-
-      let ethUsdSide = amount0 * ethUsd;
-      let tokUsdSide = amount1 * (t.price || 0);
-      const sum = ethUsdSide + tokUsdSide;
-      if (sum > 0 && t.lp_value > 0) {
-        const scale = t.lp_value / sum;
-        ethUsdSide *= scale;
-        tokUsdSide *= scale;
-      }
-      if (ethUsdSide > 0 || tokUsdSide > 0) {
-        t.eth_side = +ethUsdSide.toFixed(2);
-        t.token_side = +tokUsdSide.toFixed(2);
-        filled++;
-      }
-      await new Promise((r) => setTimeout(r, 40));
-    } catch (e) {
-      // keep null
-    }
-  }
-  console.log("ETH/Token sides filled:", filled);
 }
 
 async function main() {
@@ -380,20 +300,6 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  let ethUsd = 0;
-  for (const t of ranked) {
-    if (t.price > 0 && t.price_eth > 0) {
-      ethUsd = t.price / t.price_eth;
-      break;
-    }
-  }
-  if (ethUsd > 0) {
-    console.log("ETH USD ~", ethUsd.toFixed(2));
-    await fillSides(ranked, ethUsd);
-  } else {
-    console.log("No ETH price; skip sides");
-  }
-
   const now = Date.now();
   let history = await loadHistory();
   for (const t of ranked) {
@@ -423,7 +329,6 @@ async function main() {
     t.lp_change_7d_pct = pctChange(t.lp_value, lp7);
     t.lp_change_30d = dollarChange(t.lp_value, lp30);
     t.lp_change_30d_pct = pctChange(t.lp_value, lp30);
-    delete t.price_eth;
   }
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
