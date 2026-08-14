@@ -103,6 +103,17 @@
       margin-right: 0.5rem;
     }
     .topnav .brand:hover { color: #6ee7b7; background: transparent; }
+    .page-btn {
+      background: #171717;
+      border: 1px solid #333;
+      color: #e5e5e5;
+      border-radius: 0.5rem;
+      padding: 0.4rem 1rem;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
+    .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -118,14 +129,11 @@
 
   <div class="max-w-[1400px] mx-auto p-4 md:p-6" style="padding-top: 2.5rem;">
     <div class="flex flex-wrap items-end justify-between gap-3 mb-8">
-      <div>
-        <h1 class="text-2xl font-bold text-emerald-400 mb-1">THICC Screener</h1>
-        <p class="text-sm text-neutral-400">
-          Discover the top 1,000 tokens on
-          <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
-          ranked by LP value
-        </p>
-      </div>
+      <p class="text-sm text-neutral-400">
+        Discover the top 1,000 tokens on
+        <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
+        ranked by LP value
+      </p>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
@@ -140,136 +148,4 @@
           <col style="width:4%" />
           <col style="width:16%" />
           <col style="width:10%" />
-          <col style="width:11%" />
-          <col style="width:11%" />
-          <col style="width:11%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
-          <col style="width:7%" />
-        </colgroup>
-        <thead class="bg-neutral-900 text-neutral-400 text-xs">
-          <tr>
-            <th>#</th>
-            <th>Token</th>
-            <th>LP Value</th>
-            <th>24h</th>
-            <th>7d</th>
-            <th>30d</th>
-            <th>Fdv</th>
-            <th>Volume</th>
-            <th>Price</th>
-            <th>Trade</th>
-          </tr>
-        </thead>
-        <tbody id="rows" class="divide-y divide-neutral-800"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <script>
-    const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
-    const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
-
-    let allTokens = [];
-
-    const fmtUsd = (n) => {
-      if (n == null || n === "" || Number.isNaN(Number(n))) return "—";
-      const x = Number(n);
-      if (Math.abs(x) >= 1e6) return "$" + (x / 1e6).toFixed(2) + "M";
-      if (Math.abs(x) >= 1e3) return "$" + (x / 1e3).toFixed(1) + "k";
-      if (Math.abs(x) >= 1) return "$" + x.toFixed(2);
-      if (Math.abs(x) >= 0.01) return "$" + x.toFixed(4);
-      return "$" + x.toFixed(6);
-    };
-
-    const fmtPrice = (n) => {
-      if (n == null || Number.isNaN(Number(n))) return "—";
-      const x = Number(n);
-      if (x >= 1) return "$" + x.toFixed(4);
-      if (x >= 0.0001) return "$" + x.toFixed(6);
-      if (x >= 1e-8) return "$" + x.toFixed(10);
-      return "$" + x.toFixed(12);
-    };
-
-    const fmtChange = (usd, pct) => {
-      if (usd == null && pct == null) return "—";
-      const v = usd ?? pct;
-      const cls = v >= 0 ? "pos" : "neg";
-      const sign = v >= 0 ? "+" : "";
-      const u = usd != null ? sign + fmtUsd(Math.abs(usd)) : "";
-      const p = pct != null ? ` (${sign}${Number(pct).toFixed(1)}%)` : "";
-      return `<span class="${cls}">${u}${p}</span>`;
-    };
-
-    function tokenLogo(t) {
-      if (t.image) {
-        return `<img class="token-logo" src="${t.image}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
-      }
-      return `<span class="token-logo-fallback">${t.emoji || (t.symbol || "?").charAt(0)}</span>`;
-    }
-
-    function copyCA(addr, el) {
-      navigator.clipboard.writeText(addr).then(() => {
-        const prev = el.innerHTML;
-        el.innerHTML = CHECK_ICON;
-        setTimeout(() => { el.innerHTML = prev; }, 1200);
-      });
-    }
-    window.copyCA = copyCA;
-
-    function render(tokens) {
-      document.getElementById("rows").innerHTML = tokens
-        .map((t, i) => {
-          const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
-          return `<tr class="hover:bg-neutral-900/80">
-            <td class="text-neutral-500">${i + 1}</td>
-            <td>
-              <div class="token-cell">
-                ${tokenLogo(t)}
-                <div class="min-w-0">
-                  <div class="font-semibold text-white inline-flex items-center max-w-full">
-                    <span class="truncate">${t.symbol || "???"}</span>
-                    <span onclick="copyCA('${t.token}', this)" title="Copy CA">${COPY_ICON}</span>
-                  </div>
-                  <div class="text-xs text-neutral-500 truncate">${t.name || ""}</div>
-                </div>
-              </div>
-            </td>
-            <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
-            <td>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
-            <td>${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
-            <td>${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
-            <td>${fmtUsd(t.fdv)}</td>
-            <td>${fmtUsd(t.volume_24h)}</td>
-            <td>${fmtPrice(t.price)}</td>
-            <td><a class="text-emerald-400 hover:underline" href="${trade}" target="_blank" rel="noopener">Trade</a></td>
-          </tr>`;
-        })
-        .join("");
-    }
-
-    function applySearch() {
-      const q = (document.getElementById("search").value || "").trim().toLowerCase();
-      if (!q) { render(allTokens); return; }
-      render(allTokens.filter((t) =>
-        (t.symbol || "").toLowerCase().includes(q) ||
-        (t.name || "").toLowerCase().includes(q) ||
-        (t.token || "").toLowerCase().includes(q)
-      ));
-    }
-
-    async function load() {
-      const res = await fetch("./data.json?t=" + Date.now());
-      const data = await res.json();
-      allTokens = data.tokens || [];
-      render(allTokens);
-    }
-
-    document.getElementById("search").addEventListener("input", applySearch);
-    load().catch((e) => {
-      console.error(e);
-    });
-  </script>
-</body>
-</html>
+         
