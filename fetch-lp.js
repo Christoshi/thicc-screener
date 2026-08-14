@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade tRPC + recent Blockscout launches (free)
+// fetch-lp.js — pools.trade: full TokenLaunched backfill (resumable) + tRPC stats
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -10,12 +10,7 @@ const MS_24H = 24 * 60 * 60 * 1000;
 const MS_7D = 7 * MS_24H;
 const MS_30D = 30 * MS_24H;
 
-// Always try to include these (your token + any others you care about)
-const FORCE_INCLUDE = [
-  "0xe72936b1fe4cc0a521ae82bb9239f28f3fdb1c5d", // THICC
-];
-
-// Official pools.trade launchpad contracts only
+// Official pools.trade launchpads only
 const LAUNCHPADS = [
   "0x23f8209572b4a1c2ad88a42749e830791fb027f1",
   "0xad44d55e7f8337c3ce113fbb591486e85be104b2",
@@ -26,8 +21,12 @@ const TOPIC_TOKEN_LAUNCHED =
   "0x3b3d2bafdcae274a232217e1f80ee4305d3af6aa25c8b14b1681bd68d18042a4";
 
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
-// ~30 min of L2 blocks (~0.1s/block) — keep range small for free API
-const RECENT_BLOCK_WINDOW = 20_000;
+
+// First useful history (adjust if needed). Backfill walks from here → tip.
+const START_BLOCK = 1;
+// Budget per GitHub Actions run (tune if rate-limited / timeouts)
+const BLOCKS_PER_RUN = 80_000;
+const ENRICH_CAP = 60; // max getLaunchByAddress calls per run
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -50,7 +49,7 @@ function mapLaunch(l, source) {
   const vol = Number(stats.volume24hUsd ?? l.volume24hUsd ?? 0);
   const fdv = Number(l.fdvUsd ?? (price > 0 ? price * 1e9 : 0));
   const token = (l.tokenAddress || l.token || "").toLowerCase();
-  if (!token) return null;
+  if (!token || token.length !== 42) return null;
   return {
     token,
     symbol: l.tokenSymbol || "???",
@@ -68,7 +67,9 @@ function mapLaunch(l, source) {
 }
 
 async function getLatestBlock() {
-  const res = await fetch("https://robinhoodchain.blockscout.com/api/v2/blocks?type=block");
+  const res = await fetch(
+    "https://robinhoodchain.blockscout.com/api/v2/blocks?type=block"
+  );
   const json = await res.json();
   const h = json?.items?.[0]?.height;
   if (!h) throw new Error("Could not get latest block");
@@ -76,50 +77,52 @@ async function getLatestBlock() {
 }
 
 function decodeTokenLaunched(log) {
-  // topics[0] = event sig
-  // topics[1] = poolId (bytes32) when indexed
-  // topics[2] = token (address) when indexed
   const topics = log.topics || [];
   let token = null;
   let poolId = null;
   if (topics[1]) poolId = topics[1].toLowerCase();
-  if (topics[2] && topics[2].length === 66) {
-    token = ("0x" + topics[2].slice(26)).toLowerCase();
+  if (topics[2] && topics[2].length >= 66) {
+    token = ("0x" + topics[2].slice(-40)).toLowerCase();
   }
-  // fallback: parse data if needed
-  if (!token && log.data && log.data.length >= 130) {
-    // non-indexed layout varies; skip if we can't decode cleanly
-  }
-  if (!token || !token.startsWith("0x") || token.length !== 42) return null;
+  if (!token || token.length !== 42) return null;
+  const bn =
+    typeof log.blockNumber === "string" && log.blockNumber.startsWith("0x")
+      ? parseInt(log.blockNumber, 16)
+      : Number(log.blockNumber) || 0;
   return {
     token,
     poolId,
-    blockNumber: parseInt(log.blockNumber, 16) || Number(log.blockNumber) || 0,
+    blockNumber: bn,
     txHash: log.transactionHash || null,
   };
 }
 
-async function fetchRecentLaunches(fromBlock, toBlock) {
+async function fetchLogsForRange(fromBlock, toBlock) {
   const found = [];
   for (const addr of LAUNCHPADS) {
-    const url =
-      `${BLOCKSCOUT}?module=logs&action=getLogs` +
-      `&fromBlock=${fromBlock}&toBlock=${toBlock}` +
-      `&address=${addr}&topic0=${TOPIC_TOKEN_LAUNCHED}`;
-    try {
-      const res = await fetch(url, {
-        headers: { "User-Agent": "thicc-screener/1.0" },
-      });
-      const json = await res.json();
-      const logs = Array.isArray(json.result) ? json.result : [];
-      for (const log of logs) {
-        const d = decodeTokenLaunched(log);
-        if (d) found.push({ ...d, launchpad: addr });
+    // Split into smaller sub-ranges if needed (1000 log cap)
+    let start = fromBlock;
+    while (start <= toBlock) {
+      const end = Math.min(start + 15_000 - 1, toBlock); // modest span per request
+      const url =
+        `${BLOCKSCOUT}?module=logs&action=getLogs` +
+        `&fromBlock=${start}&toBlock=${end}` +
+        `&address=${addr}&topic0=${TOPIC_TOKEN_LAUNCHED}`;
+      try {
+        const res = await fetch(url, {
+          headers: { "User-Agent": "thicc-screener/1.0" },
+        });
+        const json = await res.json();
+        const logs = Array.isArray(json.result) ? json.result : [];
+        for (const log of logs) {
+          const d = decodeTokenLaunched(log);
+          if (d) found.push({ ...d, launchpad: addr.toLowerCase() });
+        }
+      } catch (e) {
+        console.log("  log err", addr.slice(0, 10), start, e.message);
       }
-      // be nice to free tier
-      await new Promise((r) => setTimeout(r, 250));
-    } catch (e) {
-      console.log("  blockscout skip", addr.slice(0, 10), e.message);
+      await new Promise((r) => setTimeout(r, 200));
+      start = end + 1;
     }
   }
   return found;
@@ -130,7 +133,12 @@ async function loadLaunchesState() {
     const raw = await fs.readFile(LAUNCHES_PATH, "utf-8");
     return JSON.parse(raw);
   } catch {
-    return { lastScannedBlock: 0, tokens: {} };
+    return {
+      backfillDone: false,
+      lastScannedBlock: 0,
+      startBlock: START_BLOCK,
+      tokens: {},
+    };
   }
 }
 
@@ -156,6 +164,7 @@ function closestLp(byToken, token, targetTs) {
       best = r.lp_value;
     }
   }
+  // accept snapshot within ±12h of target
   if (best == null || bestDiff > 12 * 3600e3) return null;
   return best;
 }
@@ -170,138 +179,143 @@ function pctChange(now, then) {
 }
 
 async function main() {
-  // ── 1. tRPC bulk lists ──────────────────────────────────────────
-  console.log("Fetching curve.listLaunches (volume)...");
-  let byVolume = [];
-  try {
-    byVolume = (await trpc("curve.listLaunches", { sortBy: "volume" })) || [];
-    if (!Array.isArray(byVolume)) byVolume = [];
-    console.log("  got", byVolume.length);
-  } catch (e) {
-    console.log("  volume fail:", e.message);
-  }
+  await fs.mkdir("data", { recursive: true });
 
-  console.log("Fetching curve.listLaunches (trending)...");
-  let byTrending = [];
-  try {
-    byTrending = (await trpc("curve.listLaunches", { sortBy: "trending" })) || [];
-    if (!Array.isArray(byTrending)) byTrending = [];
-    console.log("  got", byTrending.length);
-  } catch (e) {
-    console.log("  trending skip:", e.message);
-  }
-
-  console.log("Fetching curve.listLaunches (recency)...");
-  let byRecency = [];
-  try {
-    byRecency = (await trpc("curve.listLaunches", { sortBy: "recency" })) || [];
-    if (!Array.isArray(byRecency)) byRecency = [];
-    console.log("  got", byRecency.length);
-  } catch (e) {
-    console.log("  recency skip:", e.message);
-  }
-
-  console.log("Fetching cca.listAuctions...");
-  let auctions = [];
-  try {
-    auctions = (await trpc("cca.listAuctions", {})) || [];
-    if (!Array.isArray(auctions)) auctions = [];
-    console.log("  got", auctions.length);
-  } catch (e) {
-    console.log("  cca skip:", e.message);
-  }
-
-  const map = new Map();
-  for (const list of [byVolume, byTrending, byRecency]) {
-    for (const l of list) {
-      const m = mapLaunch(l, "curve");
-      if (m && (!map.has(m.token) || m.lp_value > (map.get(m.token).lp_value || 0))) {
-        map.set(m.token, m);
-      }
-    }
-  }
-  for (const a of auctions) {
-    if (a.status !== "graduated" && !a.poolKeyHash && !a.poolStats) continue;
-    const m = mapLaunch(a, "cca");
-    if (m && (!map.has(m.token) || m.lp_value > (map.get(m.token).lp_value || 0))) {
-      map.set(m.token, m);
-    }
-  }
-
-  // ── 2. Incremental Blockscout (recent window only) ─────────────
+  // ── 1. Blockscout: resume backfill or incremental ───────────────
   const state = await loadLaunchesState();
   let latest = 0;
   try {
     latest = await getLatestBlock();
     console.log("Latest block:", latest);
   } catch (e) {
-    console.log("Block height skip:", e.message);
+    console.log("Block height fail:", e.message);
   }
 
   if (latest > 0) {
-    const fromBlock =
-      state.lastScannedBlock > 0
-        ? state.lastScannedBlock + 1
-        : Math.max(1, latest - RECENT_BLOCK_WINDOW);
-    const toBlock = latest;
-    if (fromBlock <= toBlock) {
-      console.log(`Scanning TokenLaunched blocks ${fromBlock} → ${toBlock}...`);
-      const recent = await fetchRecentLaunches(fromBlock, toBlock);
-      console.log("  new log events:", recent.length);
-      for (const r of recent) {
-        if (!state.tokens[r.token]) {
-          state.tokens[r.token] = {
-            token: r.token,
-            poolId: r.poolId,
-            blockNumber: r.blockNumber,
-            launchpad: r.launchpad,
+    if (!state.lastScannedBlock || state.lastScannedBlock < state.startBlock) {
+      state.lastScannedBlock = state.startBlock - 1;
+    }
+
+    const fromBlock = state.lastScannedBlock + 1;
+    const toBlock = Math.min(fromBlock + BLOCKS_PER_RUN - 1, latest);
+
+    if (fromBlock <= latest) {
+      console.log(
+        `Scanning TokenLaunched ${fromBlock} → ${toBlock}` +
+          (state.backfillDone ? " (incremental)" : " (backfill)")
+      );
+      const events = await fetchLogsForRange(fromBlock, toBlock);
+      console.log("  events:", events.length);
+      let added = 0;
+      for (const e of events) {
+        if (!state.tokens[e.token]) {
+          state.tokens[e.token] = {
+            token: e.token,
+            poolId: e.poolId,
+            blockNumber: e.blockNumber,
+            launchpad: e.launchpad,
           };
+          added++;
         }
       }
+      console.log("  new tokens:", added);
       state.lastScannedBlock = toBlock;
-      await fs.mkdir("data", { recursive: true });
+
+      if (!state.backfillDone && state.lastScannedBlock >= latest - 100) {
+        state.backfillDone = true;
+        console.log("Backfill complete.");
+      } else if (!state.backfillDone) {
+        const pct = (
+          ((state.lastScannedBlock - state.startBlock) /
+            Math.max(1, latest - state.startBlock)) *
+          100
+        ).toFixed(2);
+        console.log(`Backfill progress ~${pct}% (cursor ${state.lastScannedBlock})`);
+      }
+
       await fs.writeFile(LAUNCHES_PATH, JSON.stringify(state, null, 2));
     }
   }
 
-  // ── 3. Enrich missing / force-include via getLaunchByAddress ────
-  const toEnrich = new Set([
-    ...FORCE_INCLUDE.map((t) => t.toLowerCase()),
-    ...Object.keys(state.tokens),
-  ]);
+  const launchTokens = Object.keys(state.tokens);
+  console.log("Known launches in launches.json:", launchTokens.length);
 
-  // Only fetch ones we don't already have with LP
-  const needFetch = [...toEnrich].filter((t) => {
+  // ── 2. tRPC bulk lists ──────────────────────────────────────────
+  const map = new Map();
+
+  async function pullList(sortBy) {
+    try {
+      const list = (await trpc("curve.listLaunches", { sortBy })) || [];
+      const arr = Array.isArray(list) ? list : [];
+      console.log(`  listLaunches ${sortBy}:`, arr.length);
+      for (const l of arr) {
+        const m = mapLaunch(l, "curve");
+        if (m && (!map.has(m.token) || m.lp_value > (map.get(m.token).lp_value || 0))) {
+          map.set(m.token, m);
+        }
+      }
+    } catch (e) {
+      console.log(`  listLaunches ${sortBy} skip:`, e.message);
+    }
+  }
+
+  console.log("Fetching tRPC lists...");
+  await pullList("volume");
+  await pullList("trending");
+  await pullList("recency");
+
+  try {
+    const auctions = (await trpc("cca.listAuctions", {})) || [];
+    const arr = Array.isArray(auctions) ? auctions : [];
+    console.log("  listAuctions:", arr.length);
+    for (const a of arr) {
+      if (a.status !== "graduated" && !a.poolKeyHash && !a.poolStats) continue;
+      const m = mapLaunch(a, "cca");
+      if (m && (!map.has(m.token) || m.lp_value > (map.get(m.token).lp_value || 0))) {
+        map.set(m.token, m);
+      }
+    }
+  } catch (e) {
+    console.log("  cca skip:", e.message);
+  }
+
+  // ── 3. Enrich launches missing from tRPC top slices ─────────────
+  const needEnrich = launchTokens.filter((t) => {
     const existing = map.get(t);
     return !existing || existing.lp_value <= 0;
   });
 
-  console.log("Enriching via getLaunchByAddress:", needFetch.length);
-  for (const token of needFetch.slice(0, 80)) {
-    // cap per run to stay free/fast
+  // Prefer more recent launches first
+  needEnrich.sort((a, b) => {
+    const ba = state.tokens[a]?.blockNumber || 0;
+    const bb = state.tokens[b]?.blockNumber || 0;
+    return bb - ba;
+  });
+
+  console.log("Enrich candidates:", needEnrich.length, "→ cap", ENRICH_CAP);
+  for (const token of needEnrich.slice(0, ENRICH_CAP)) {
     try {
       const data = await trpc("curve.getLaunchByAddress", { tokenAddress: token });
       const m = mapLaunch(data, "curve");
-      if (m && m.lp_value > 0) {
+      if (m && (m.lp_value > 0 || m.fdv > 0)) {
         map.set(m.token, m);
-        console.log("  +", m.symbol, "LP $", m.lp_value);
       }
-      await new Promise((r) => setTimeout(r, 150));
-    } catch (e) {
-      // token may be CCA-only or not found
+      await new Promise((r) => setTimeout(r, 120));
+    } catch {
+      // not found / CCA-only / rate limit
     }
   }
 
-  // ── 4. Rank ────────────────────────────────────────────────────
+  // ── 4. Rank ─────────────────────────────────────────────────────
   const ranked = [...map.values()]
     .filter((t) => t.lp_value > 0 || t.fdv > 0)
     .sort((a, b) => b.lp_value - a.lp_value)
     .slice(0, TOP_N);
 
-  console.log("Ranked", ranked.length, "tokens");
+  console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  // ── 5. History / LP change ─────────────────────────────────────
+  // ── 5. History / LP change ──────────────────────────────────────
   const now = Date.now();
   let history = await loadHistory();
   for (const t of ranked) {
@@ -333,13 +347,12 @@ async function main() {
     t.lp_change_30d_pct = pctChange(t.lp_value, lp30);
   }
 
-  await fs.mkdir("data", { recursive: true });
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
   await fs.writeFile(
     OUTPUT_PATH,
     JSON.stringify({ updated: now, tokens: ranked }, null, 2)
   );
-  console.log("Done. Wrote data.json + history + launches");
+  console.log("Done.");
 }
 
 main().catch((err) => {
