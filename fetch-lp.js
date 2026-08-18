@@ -203,38 +203,50 @@ async function fetchPoolSides(poolId) {
         }
       }
     }`;
-  try {
-    const res = await fetch(BITQUERY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${BITQUERY_KEY}`,
-        "X-API-KEY": BITQUERY_KEY,
-      },
-      body: JSON.stringify({ query }),
-    });
-    if (!res.ok) {
-      console.log("  bitquery HTTP", res.status, pid.slice(0, 12));
+
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const res = await fetch(BITQUERY_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${BITQUERY_KEY}`,
+          "X-API-KEY": BITQUERY_KEY,
+        },
+        body: JSON.stringify({ query }),
+      });
+      if (res.status === 429) {
+        const wait = attempt * 5000;
+        console.log(
+          `  bitquery 429 ${pid.slice(0, 12)} — wait ${wait / 1000}s (try ${attempt}/4)`
+        );
+        await new Promise((r) => setTimeout(r, wait));
+        continue;
+      }
+      if (!res.ok) {
+        console.log("  bitquery HTTP", res.status, pid.slice(0, 12));
+        return null;
+      }
+      const json = await res.json();
+      if (json.errors?.length) {
+        console.log("  bitquery err", json.errors[0]?.message || json.errors);
+        return null;
+      }
+      const row = json?.data?.EVM?.DEXPoolEvents?.[0]?.PoolEvent?.Liquidity;
+      if (!row) return null;
+      const eth = Number(row.AmountCurrencyA);
+      const tok = Number(row.AmountCurrencyB);
+      if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
+      return {
+        eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
+        token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
+      };
+    } catch (e) {
+      console.log("  bitquery fail", e.message);
       return null;
     }
-    const json = await res.json();
-    if (json.errors?.length) {
-      console.log("  bitquery err", json.errors[0]?.message || json.errors);
-      return null;
-    }
-    const row = json?.data?.EVM?.DEXPoolEvents?.[0]?.PoolEvent?.Liquidity;
-    if (!row) return null;
-    const eth = Number(row.AmountCurrencyA);
-    const tok = Number(row.AmountCurrencyB);
-    if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
-    return {
-      eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
-      token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
-    };
-  } catch (e) {
-    console.log("  bitquery fail", e.message);
-    return null;
   }
+  return null;
 }
 
 async function main() {
@@ -379,7 +391,7 @@ async function main() {
         t.token_side = sides.token_side;
         ok++;
       }
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 3000));
     }
     console.log("  sides ok:", ok);
   } else {
