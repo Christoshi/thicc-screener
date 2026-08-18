@@ -1,11 +1,10 @@
-// fetch-lp.js — pools.trade backfill + tRPC + sides (Bitquery when available, else last known) + CoinGecko ETH USD
+// fetch-lp.js — pools.trade backfill + tRPC + DexScreener sides (all top 100) + CoinGecko ETH USD
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
 const HISTORY_PATH = "data/history.json";
 const LAUNCHES_PATH = "data/launches.json";
 const TOP_N = 100;
-const SIDES_CAP = 100;
 
 const MS_24H = 24 * 60 * 60 * 1000;
 const MS_7D = 7 * MS_24H;
@@ -25,8 +24,8 @@ const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
 
-const BITQUERY_URL = "https://streaming.bitquery.io/graphql";
-const BITQUERY_KEY = process.env.BITQUERY_API_KEY || "";
+const ZERO = "0x0000000000000000000000000000000000000000";
+const WETH_RH = "0x0bd7d308f8e1639fab988df18a8011f41eacad73"; // common WETH on Robinhood
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -154,7 +153,6 @@ async function loadHistory() {
   }
 }
 
-/** Last known sides from previous data.json */
 async function loadPrevSides() {
   const map = new Map();
   try {
@@ -166,13 +164,11 @@ async function loadPrevSides() {
         map.set(t.token.toLowerCase(), {
           eth_side: t.eth_side ?? null,
           token_side: t.token_side ?? null,
-          eth_side_usd: t.eth_side_usd ?? null,
-          token_side_usd: t.token_side_usd ?? null,
         });
       }
     }
   } catch {
-    /* no prior file */
+    /* no prior */
   }
   return map;
 }
@@ -198,6 +194,134 @@ async function fetchEthUsd() {
   }
 }
 
+function isEthAddress(addr) {
+  if (!addr) return false;
+  const a = addr.toLowerCase();
+  return a === ZERO || a === WETH_RH;
+}
+
+/** Pick best ETH-paired pool from DexScreener pairs for a token */
+function pickEthPair(pairs, tokenAddr, preferredPoolId) {
+  if (!Array.isArray(pairs) || !pairs.length) return null;
+  const tok = tokenAddr.toLowerCase();
+
+  const ethPairs = pairs.filter((p) => {
+    if ((p.chainId || "").toLowerCase() !== "robinhood") return false;
+    const base = (p.baseToken?.address || "").toLowerCase();
+    const quote = (p.quoteToken?.address || "").toLowerCase();
+    const involvesToken = base === tok || quote === tok;
+    const involvesEth = isEthAddress(base) || isEthAddress(quote);
+    return involvesToken && involvesEth;
+  });
+
+  if (!ethPairs.length) return null;
+
+  // Prefer exact pool_id match (v4 pool id often = pairAddress on DexScreener)
+  if (preferredPoolId) {
+    const pid = preferredPoolId.toLowerCase().replace(/^0x/, "");
+    const match = ethPairs.find((p) =>
+      (p.pairAddress || "").toLowerCase().replace(/^0x/, "") === pid
+    );
+    if (match) return match;
+  }
+
+  // Highest USD liquidity
+  ethPairs.sort(
+    (a, b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0)
+  );
+  return ethPairs[0];
+}
+
+function sidesFromPair(pair, tokenAddr) {
+  if (!pair?.liquidity) return null;
+  const tok = tokenAddr.toLowerCase();
+  const base = (pair.baseToken?.address || "").toLowerCase();
+  const quote = (pair.quoteToken?.address || "").toLowerCase();
+  const baseAmt = Number(pair.liquidity.base);
+  const quoteAmt = Number(pair.liquidity.quote);
+
+  let eth_side = null;
+  let token_side = null;
+
+  if (isEthAddress(quote) && base === tok) {
+    eth_side = quoteAmt;
+    token_side = baseAmt;
+  } else if (isEthAddress(base) && quote === tok) {
+    eth_side = baseAmt;
+    token_side = quoteAmt;
+  } else {
+    return null;
+  }
+
+  if (!Number.isFinite(eth_side) && !Number.isFinite(token_side)) return null;
+  return {
+    eth_side: Number.isFinite(eth_side) ? +eth_side.toFixed(6) : null,
+    token_side: Number.isFinite(token_side) ? +token_side.toFixed(4) : null,
+  };
+}
+
+/** Batch fetch DexScreener pairs for up to 30 token addresses */
+async function fetchDexBatch(addresses) {
+  const list = addresses.map((a) => a.toLowerCase()).filter(Boolean);
+  if (!list.length) return [];
+  const url = `https://api.dexscreener.com/tokens/v1/robinhood/${list.join(",")}`;
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": "thicc-screener/1.0" },
+    });
+    if (!res.ok) {
+      console.log("  dexscreener HTTP", res.status);
+      return [];
+    }
+    const json = await res.json();
+    // tokens/v1 returns an array of pair objects
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json?.pairs)) return json.pairs;
+    return [];
+  } catch (e) {
+    console.log("  dexscreener fail:", e.message);
+    return [];
+  }
+}
+
+async function fetchAllDexSides(ranked) {
+  const byToken = new Map(); // token -> pairs[]
+  const chunks = [];
+  for (let i = 0; i < ranked.length; i += 30) {
+    chunks.push(ranked.slice(i, i + 30));
+  }
+
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    const addrs = chunk.map((t) => t.token);
+    console.log(`  DexScreener batch ${i + 1}/${chunks.length} (${addrs.length} tokens)`);
+    const pairs = await fetchDexBatch(addrs);
+    for (const p of pairs) {
+      const base = (p.baseToken?.address || "").toLowerCase();
+      const quote = (p.quoteToken?.address || "").toLowerCase();
+      for (const addr of [base, quote]) {
+        if (!addr || addr === ZERO || addr === WETH_RH) continue;
+        if (!byToken.has(addr)) byToken.set(addr, []);
+        byToken.get(addr).push(p);
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+
+  let ok = 0;
+  for (const t of ranked) {
+    const pairs = byToken.get(t.token) || [];
+    const pair = pickEthPair(pairs, t.token, t.pool_id);
+    const sides = pair ? sidesFromPair(pair, t.token) : null;
+    if (sides) {
+      t.eth_side = sides.eth_side;
+      t.token_side = sides.token_side;
+      ok++;
+    }
+  }
+  return ok;
+}
+
 function closestRow(byToken, token, targetTs) {
   const rows = byToken.get(token);
   if (!rows?.length) return null;
@@ -221,81 +345,6 @@ function dollarChange(now, then) {
 function pctChange(now, then) {
   if (then == null || then === 0 || now == null) return null;
   return +(((now - then) / then) * 100).toFixed(2);
-}
-
-/** Returns { sides } or { quota: true } on 402 */
-async function fetchPoolSides(poolId) {
-  if (!BITQUERY_KEY || !poolId) return null;
-  const pid = poolId.startsWith("0x") ? poolId.toLowerCase() : "0x" + poolId.toLowerCase();
-  const query = `
-    query {
-      EVM(network: robinhood) {
-        DEXPoolEvents(
-          limit: { count: 1 }
-          orderBy: { descending: Block_Time }
-          where: {
-            PoolEvent: {
-              Pool: { PoolId: { is: "${pid}" } }
-            }
-          }
-        ) {
-          PoolEvent {
-            Liquidity {
-              AmountCurrencyA
-              AmountCurrencyB
-            }
-          }
-        }
-      }
-    }`;
-
-  for (let attempt = 1; attempt <= 4; attempt++) {
-    try {
-      const res = await fetch(BITQUERY_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${BITQUERY_KEY}`,
-          "X-API-KEY": BITQUERY_KEY,
-        },
-        body: JSON.stringify({ query }),
-      });
-      if (res.status === 402) {
-        console.log("  bitquery 402 — quota exhausted, stopping Bitquery for this run");
-        return { quota: true };
-      }
-      if (res.status === 429) {
-        const wait = attempt * 5000;
-        console.log(
-          `  bitquery 429 ${pid.slice(0, 12)} — wait ${wait / 1000}s (try ${attempt}/4)`
-        );
-        await new Promise((r) => setTimeout(r, wait));
-        continue;
-      }
-      if (!res.ok) {
-        console.log("  bitquery HTTP", res.status, pid.slice(0, 12));
-        return null;
-      }
-      const json = await res.json();
-      if (json.errors?.length) {
-        console.log("  bitquery err", json.errors[0]?.message || json.errors);
-        return null;
-      }
-      const row = json?.data?.EVM?.DEXPoolEvents?.[0]?.PoolEvent?.Liquidity;
-      if (!row) return null;
-      const eth = Number(row.AmountCurrencyA);
-      const tok = Number(row.AmountCurrencyB);
-      if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
-      return {
-        eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
-        token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
-      };
-    } catch (e) {
-      console.log("  bitquery fail", e.message);
-      return null;
-    }
-  }
-  return null;
 }
 
 async function main() {
@@ -434,7 +483,7 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  // Apply last-known sides first
+  // 1) Seed from previous run (fallback)
   for (const t of ranked) {
     const prev = prevSides.get(t.token);
     if (prev) {
@@ -443,31 +492,12 @@ async function main() {
     }
   }
 
-  let bitqueryOk = 0;
-  let bitqueryQuota = false;
-  if (BITQUERY_KEY) {
-    console.log(`Fetching Bitquery sides for top ${SIDES_CAP}...`);
-    for (const t of ranked.slice(0, SIDES_CAP)) {
-      if (bitqueryQuota) break;
-      if (!t.pool_id) continue;
-      const result = await fetchPoolSides(t.pool_id);
-      if (result?.quota) {
-        bitqueryQuota = true;
-        break;
-      }
-      if (result && (result.eth_side != null || result.token_side != null)) {
-        t.eth_side = result.eth_side;
-        t.token_side = result.token_side;
-        bitqueryOk++;
-      }
-      await new Promise((r) => setTimeout(r, 3000));
-    }
-    console.log("  bitquery fresh sides:", bitqueryOk, bitqueryQuota ? "(stopped on 402)" : "");
-  } else {
-    console.log("BITQUERY_API_KEY not set — using cached sides only");
-  }
+  // 2) Fresh sides from DexScreener for all top 100
+  console.log("Fetching DexScreener sides for top", ranked.length, "...");
+  const dexOk = await fetchAllDexSides(ranked);
+  console.log("  dexscreener sides ok:", dexOk);
 
-  // CoinGecko: ETH $ for every token that has eth_side
+  // 3) CoinGecko ETH $ + token $ from price
   for (const t of ranked) {
     if (t.eth_side != null && ethUsd != null) {
       t.eth_side_usd = +(t.eth_side * ethUsd).toFixed(2);
@@ -559,7 +589,7 @@ async function main() {
     total_eth_change_24h_pct: totalEthChg24,
     eth_usd: ethUsd,
     sides_tracked: withSides.length,
-    sides_source: bitqueryOk > 0 ? "bitquery+cache" : "cache",
+    sides_source: "dexscreener",
   };
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
