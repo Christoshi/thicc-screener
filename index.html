@@ -139,10 +139,10 @@
       padding: 0.75rem 0.9rem;
     }
     .stat-label {
-      font-size: 0.7rem;
-      color: #737373;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
+      font-size: 0.8rem;
+      color: #a3a3a3;
+      letter-spacing: 0;
+      text-transform: none;
     }
     .stat-value {
       font-size: 1.05rem;
@@ -152,6 +152,11 @@
       font-variant-numeric: tabular-nums;
     }
     .stat-value.accent { color: #34d399; }
+    .stat-sub {
+      font-size: 0.75rem;
+      margin-top: 0.15rem;
+      font-variant-numeric: tabular-nums;
+    }
 
     .mobile-list { display: none; }
     .m-card {
@@ -223,15 +228,16 @@
         <div class="stat-value accent" id="stat-lp">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Total ETH in pools</div>
+        <div class="stat-label">Total ETH in Pools</div>
         <div class="stat-value" id="stat-eth">—</div>
+        <div class="stat-sub" id="stat-eth-chg"></div>
       </div>
       <div class="stat-card">
         <div class="stat-label">24h Volume</div>
         <div class="stat-value" id="stat-vol">—</div>
       </div>
       <div class="stat-card">
-        <div class="stat-label">Pools tracked</div>
+        <div class="stat-label">Pools Tracked</div>
         <div class="stat-value" id="stat-pools">—</div>
       </div>
     </div>
@@ -399,6 +405,16 @@
       document.getElementById("stat-lp").textContent = fmtUsd(stats?.total_lp_usd);
       document.getElementById("stat-eth").textContent =
         stats?.total_eth_side != null ? fmtEth(stats.total_eth_side) + " ETH" : "—";
+      const chgEl = document.getElementById("stat-eth-chg");
+      const p = stats?.total_eth_change_24h_pct;
+      if (p != null && !Number.isNaN(Number(p))) {
+        const v = Number(p);
+        const cls = v >= 0 ? "pos" : "neg";
+        const sign = v >= 0 ? "+" : "";
+        chgEl.innerHTML = `<span class="${cls}">${sign}${v.toFixed(1)}% 24h</span>`;
+      } else {
+        chgEl.textContent = "";
+      }
       document.getElementById("stat-vol").textContent = fmtUsd(stats?.total_volume_24h);
       document.getElementById("stat-pools").textContent =
         stats?.pools != null ? String(stats.pools) : "—";
