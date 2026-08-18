@@ -379,7 +379,7 @@ async function main() {
         t.token_side = sides.token_side;
         ok++;
       }
-      await new Promise((r) => setTimeout(r, 250));
+      await new Promise((r) => setTimeout(r, 2000));
     }
     console.log("  sides ok:", ok);
   } else {
