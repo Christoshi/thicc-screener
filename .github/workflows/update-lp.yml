@@ -12,6 +12,8 @@ jobs:
   update-data:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      BITQUERY_API_KEY: ${{ secrets.BITQUERY_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
