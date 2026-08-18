@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade backfill + tRPC stats + Bitquery sides (top 100)
+// fetch-lp.js — pools.trade backfill + tRPC + sides (Bitquery when available, else last known) + CoinGecko ETH USD
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -154,6 +154,50 @@ async function loadHistory() {
   }
 }
 
+/** Last known sides from previous data.json */
+async function loadPrevSides() {
+  const map = new Map();
+  try {
+    const raw = await fs.readFile(OUTPUT_PATH, "utf-8");
+    const data = JSON.parse(raw);
+    for (const t of data.tokens || []) {
+      if (!t.token) continue;
+      if (t.eth_side != null || t.token_side != null) {
+        map.set(t.token.toLowerCase(), {
+          eth_side: t.eth_side ?? null,
+          token_side: t.token_side ?? null,
+          eth_side_usd: t.eth_side_usd ?? null,
+          token_side_usd: t.token_side_usd ?? null,
+        });
+      }
+    }
+  } catch {
+    /* no prior file */
+  }
+  return map;
+}
+
+async function fetchEthUsd() {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+      { headers: { Accept: "application/json", "User-Agent": "thicc-screener/1.0" } }
+    );
+    if (!res.ok) {
+      console.log("  CoinGecko HTTP", res.status);
+      return null;
+    }
+    const json = await res.json();
+    const p = Number(json?.ethereum?.usd);
+    if (!Number.isFinite(p) || p <= 0) return null;
+    console.log("  ETH/USD (CoinGecko):", p);
+    return p;
+  } catch (e) {
+    console.log("  CoinGecko fail:", e.message);
+    return null;
+  }
+}
+
 function closestRow(byToken, token, targetTs) {
   const rows = byToken.get(token);
   if (!rows?.length) return null;
@@ -179,6 +223,7 @@ function pctChange(now, then) {
   return +(((now - then) / then) * 100).toFixed(2);
 }
 
+/** Returns { sides } or { quota: true } on 402 */
 async function fetchPoolSides(poolId) {
   if (!BITQUERY_KEY || !poolId) return null;
   const pid = poolId.startsWith("0x") ? poolId.toLowerCase() : "0x" + poolId.toLowerCase();
@@ -197,9 +242,7 @@ async function fetchPoolSides(poolId) {
           PoolEvent {
             Liquidity {
               AmountCurrencyA
-              AmountCurrencyAInUSD
               AmountCurrencyB
-              AmountCurrencyBInUSD
             }
           }
         }
@@ -217,6 +260,10 @@ async function fetchPoolSides(poolId) {
         },
         body: JSON.stringify({ query }),
       });
+      if (res.status === 402) {
+        console.log("  bitquery 402 — quota exhausted, stopping Bitquery for this run");
+        return { quota: true };
+      }
       if (res.status === 429) {
         const wait = attempt * 5000;
         console.log(
@@ -238,14 +285,10 @@ async function fetchPoolSides(poolId) {
       if (!row) return null;
       const eth = Number(row.AmountCurrencyA);
       const tok = Number(row.AmountCurrencyB);
-      const ethUsd = Number(row.AmountCurrencyAInUSD);
-      const tokUsd = Number(row.AmountCurrencyBInUSD);
       if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
       return {
         eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
         token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
-        eth_side_usd: Number.isFinite(ethUsd) && ethUsd > 0 ? +ethUsd.toFixed(2) : null,
-        token_side_usd: Number.isFinite(tokUsd) && tokUsd > 0 ? +tokUsd.toFixed(2) : null,
       };
     } catch (e) {
       console.log("  bitquery fail", e.message);
@@ -257,6 +300,11 @@ async function fetchPoolSides(poolId) {
 
 async function main() {
   await fs.mkdir("data", { recursive: true });
+
+  const prevSides = await loadPrevSides();
+  console.log("Previous sides cached:", prevSides.size);
+
+  const ethUsd = await fetchEthUsd();
 
   const state = await loadLaunchesState();
   let latest = 0;
@@ -386,24 +434,47 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
+  // Apply last-known sides first
+  for (const t of ranked) {
+    const prev = prevSides.get(t.token);
+    if (prev) {
+      t.eth_side = prev.eth_side;
+      t.token_side = prev.token_side;
+    }
+  }
+
+  let bitqueryOk = 0;
+  let bitqueryQuota = false;
   if (BITQUERY_KEY) {
     console.log(`Fetching Bitquery sides for top ${SIDES_CAP}...`);
-    let ok = 0;
     for (const t of ranked.slice(0, SIDES_CAP)) {
+      if (bitqueryQuota) break;
       if (!t.pool_id) continue;
-      const sides = await fetchPoolSides(t.pool_id);
-      if (sides) {
-        t.eth_side = sides.eth_side;
-        t.token_side = sides.token_side;
-        t.eth_side_usd = sides.eth_side_usd;
-        t.token_side_usd = sides.token_side_usd;
-        ok++;
+      const result = await fetchPoolSides(t.pool_id);
+      if (result?.quota) {
+        bitqueryQuota = true;
+        break;
+      }
+      if (result && (result.eth_side != null || result.token_side != null)) {
+        t.eth_side = result.eth_side;
+        t.token_side = result.token_side;
+        bitqueryOk++;
       }
       await new Promise((r) => setTimeout(r, 3000));
     }
-    console.log("  sides ok:", ok);
+    console.log("  bitquery fresh sides:", bitqueryOk, bitqueryQuota ? "(stopped on 402)" : "");
   } else {
-    console.log("BITQUERY_API_KEY not set — skipping sides");
+    console.log("BITQUERY_API_KEY not set — using cached sides only");
+  }
+
+  // CoinGecko: ETH $ for every token that has eth_side
+  for (const t of ranked) {
+    if (t.eth_side != null && ethUsd != null) {
+      t.eth_side_usd = +(t.eth_side * ethUsd).toFixed(2);
+    }
+    if (t.token_side != null && t.price != null && t.price > 0) {
+      t.token_side_usd = +(t.token_side * t.price).toFixed(2);
+    }
   }
 
   const now = Date.now();
@@ -464,14 +535,31 @@ async function main() {
   }
 
   const withSides = ranked.filter((t) => t.eth_side != null);
+  let ethNow = 0;
+  let ethThen = 0;
+  let ethPairs = 0;
+  for (const t of withSides) {
+    ethNow += t.eth_side || 0;
+    const r24 = closestRow(byToken, t.token, now - MS_24H);
+    if (r24?.eth_side != null) {
+      ethThen += r24.eth_side;
+      ethPairs++;
+    }
+  }
+  const totalEthChg24 =
+    ethPairs > 0 && ethThen > 0
+      ? +(((ethNow - ethThen) / ethThen) * 100).toFixed(2)
+      : null;
+
   const stats = {
     pools: ranked.length,
     total_lp_usd: +ranked.reduce((s, t) => s + (t.lp_value || 0), 0).toFixed(2),
     total_volume_24h: +ranked.reduce((s, t) => s + (t.volume_24h || 0), 0).toFixed(2),
-    total_eth_side: withSides.length
-      ? +withSides.reduce((s, t) => s + (t.eth_side || 0), 0).toFixed(4)
-      : null,
+    total_eth_side: withSides.length ? +ethNow.toFixed(4) : null,
+    total_eth_change_24h_pct: totalEthChg24,
+    eth_usd: ethUsd,
     sides_tracked: withSides.length,
+    sides_source: bitqueryOk > 0 ? "bitquery+cache" : "cache",
   };
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
