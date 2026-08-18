@@ -1,10 +1,11 @@
-// fetch-lp.js — pools.trade backfill + tRPC stats (no fake sides)
+// fetch-lp.js — pools.trade backfill + tRPC stats + Bitquery sides (top 100)
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
 const HISTORY_PATH = "data/history.json";
 const LAUNCHES_PATH = "data/launches.json";
-const TOP_N = 1000;
+const TOP_N = 100;
+const SIDES_CAP = 100;
 
 const MS_24H = 24 * 60 * 60 * 1000;
 const MS_7D = 7 * MS_24H;
@@ -23,6 +24,9 @@ const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
+
+const BITQUERY_URL = "https://streaming.bitquery.io/graphql";
+const BITQUERY_KEY = process.env.BITQUERY_API_KEY || "";
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -150,7 +154,7 @@ async function loadHistory() {
   }
 }
 
-function closestLp(byToken, token, targetTs) {
+function closestRow(byToken, token, targetTs) {
   const rows = byToken.get(token);
   if (!rows?.length) return null;
   let best = null;
@@ -159,7 +163,7 @@ function closestLp(byToken, token, targetTs) {
     const d = Math.abs(r.ts - targetTs);
     if (d < bestDiff) {
       bestDiff = d;
-      best = r.lp_value;
+      best = r;
     }
   }
   if (best == null || bestDiff > 12 * 3600e3) return null;
@@ -168,11 +172,69 @@ function closestLp(byToken, token, targetTs) {
 
 function dollarChange(now, then) {
   if (then == null || now == null) return null;
-  return +(now - then).toFixed(2);
+  return +(now - then).toFixed(6);
 }
 function pctChange(now, then) {
   if (then == null || then === 0 || now == null) return null;
   return +(((now - then) / then) * 100).toFixed(2);
+}
+
+async function fetchPoolSides(poolId) {
+  if (!BITQUERY_KEY || !poolId) return null;
+  const pid = poolId.startsWith("0x") ? poolId.toLowerCase() : "0x" + poolId.toLowerCase();
+  const query = `
+    query {
+      EVM(network: robinhood) {
+        DEXPoolEvents(
+          limit: { count: 1 }
+          orderBy: { descending: Block_Time }
+          where: {
+            PoolEvent: {
+              Pool: { PoolId: { is: "${pid}" } }
+            }
+          }
+        ) {
+          PoolEvent {
+            Liquidity {
+              AmountCurrencyA
+              AmountCurrencyB
+            }
+          }
+        }
+      }
+    }`;
+  try {
+    const res = await fetch(BITQUERY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${BITQUERY_KEY}`,
+        "X-API-KEY": BITQUERY_KEY,
+      },
+      body: JSON.stringify({ query }),
+    });
+    if (!res.ok) {
+      console.log("  bitquery HTTP", res.status, pid.slice(0, 12));
+      return null;
+    }
+    const json = await res.json();
+    if (json.errors?.length) {
+      console.log("  bitquery err", json.errors[0]?.message || json.errors);
+      return null;
+    }
+    const row = json?.data?.EVM?.DEXPoolEvents?.[0]?.PoolEvent?.Liquidity;
+    if (!row) return null;
+    const eth = Number(row.AmountCurrencyA);
+    const tok = Number(row.AmountCurrencyB);
+    if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
+    return {
+      eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
+      token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
+    };
+  } catch (e) {
+    console.log("  bitquery fail", e.message);
+    return null;
+  }
 }
 
 async function main() {
@@ -292,6 +354,12 @@ async function main() {
     }
   }
 
+  for (const [token, m] of map) {
+    if (!m.pool_id && state.tokens[token]?.poolId) {
+      m.pool_id = state.tokens[token].poolId;
+    }
+  }
+
   const ranked = [...map.values()]
     .filter((t) => t.lp_value > 0 || t.fdv > 0)
     .sort((a, b) => b.lp_value - a.lp_value)
@@ -300,10 +368,34 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
+  if (BITQUERY_KEY) {
+    console.log(`Fetching Bitquery sides for top ${SIDES_CAP}...`);
+    let ok = 0;
+    for (const t of ranked.slice(0, SIDES_CAP)) {
+      if (!t.pool_id) continue;
+      const sides = await fetchPoolSides(t.pool_id);
+      if (sides) {
+        t.eth_side = sides.eth_side;
+        t.token_side = sides.token_side;
+        ok++;
+      }
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    console.log("  sides ok:", ok);
+  } else {
+    console.log("BITQUERY_API_KEY not set — skipping sides");
+  }
+
   const now = Date.now();
   let history = await loadHistory();
   for (const t of ranked) {
-    history.push({ token: t.token, ts: now, lp_value: t.lp_value });
+    history.push({
+      token: t.token,
+      ts: now,
+      lp_value: t.lp_value,
+      eth_side: t.eth_side ?? null,
+      token_side: t.token_side ?? null,
+    });
   }
   history = history
     .filter((h) => h.ts >= now - 45 * MS_24H)
@@ -311,6 +403,8 @@ async function main() {
       token: h.token,
       ts: h.ts,
       lp_value: h.lp_value ?? h.lp_usd ?? 0,
+      eth_side: h.eth_side ?? null,
+      token_side: h.token_side ?? null,
     }));
 
   const byToken = new Map();
@@ -320,23 +414,52 @@ async function main() {
   }
 
   for (const t of ranked) {
-    const lp24 = closestLp(byToken, t.token, now - MS_24H);
-    const lp7 = closestLp(byToken, t.token, now - MS_7D);
-    const lp30 = closestLp(byToken, t.token, now - MS_30D);
-    t.lp_change_24h = dollarChange(t.lp_value, lp24);
-    t.lp_change_24h_pct = pctChange(t.lp_value, lp24);
-    t.lp_change_7d = dollarChange(t.lp_value, lp7);
-    t.lp_change_7d_pct = pctChange(t.lp_value, lp7);
-    t.lp_change_30d = dollarChange(t.lp_value, lp30);
-    t.lp_change_30d_pct = pctChange(t.lp_value, lp30);
+    const r24 = closestRow(byToken, t.token, now - MS_24H);
+    const r7 = closestRow(byToken, t.token, now - MS_7D);
+    const r30 = closestRow(byToken, t.token, now - MS_30D);
+
+    t.lp_change_24h = dollarChange(t.lp_value, r24?.lp_value);
+    t.lp_change_24h_pct = pctChange(t.lp_value, r24?.lp_value);
+    t.lp_change_7d = dollarChange(t.lp_value, r7?.lp_value);
+    t.lp_change_7d_pct = pctChange(t.lp_value, r7?.lp_value);
+    t.lp_change_30d = dollarChange(t.lp_value, r30?.lp_value);
+    t.lp_change_30d_pct = pctChange(t.lp_value, r30?.lp_value);
+
+    if (t.eth_side != null) {
+      t.eth_change_24h = dollarChange(t.eth_side, r24?.eth_side);
+      t.eth_change_24h_pct = pctChange(t.eth_side, r24?.eth_side);
+      t.eth_change_7d = dollarChange(t.eth_side, r7?.eth_side);
+      t.eth_change_7d_pct = pctChange(t.eth_side, r7?.eth_side);
+      t.eth_change_30d = dollarChange(t.eth_side, r30?.eth_side);
+      t.eth_change_30d_pct = pctChange(t.eth_side, r30?.eth_side);
+    }
+    if (t.token_side != null) {
+      t.token_change_24h = dollarChange(t.token_side, r24?.token_side);
+      t.token_change_24h_pct = pctChange(t.token_side, r24?.token_side);
+      t.token_change_7d = dollarChange(t.token_side, r7?.token_side);
+      t.token_change_7d_pct = pctChange(t.token_side, r7?.token_side);
+      t.token_change_30d = dollarChange(t.token_side, r30?.token_side);
+      t.token_change_30d_pct = pctChange(t.token_side, r30?.token_side);
+    }
   }
+
+  const withSides = ranked.filter((t) => t.eth_side != null);
+  const stats = {
+    pools: ranked.length,
+    total_lp_usd: +ranked.reduce((s, t) => s + (t.lp_value || 0), 0).toFixed(2),
+    total_volume_24h: +ranked.reduce((s, t) => s + (t.volume_24h || 0), 0).toFixed(2),
+    total_eth_side: withSides.length
+      ? +withSides.reduce((s, t) => s + (t.eth_side || 0), 0).toFixed(4)
+      : null,
+    sides_tracked: withSides.length,
+  };
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
   await fs.writeFile(
     OUTPUT_PATH,
-    JSON.stringify({ updated: now, tokens: ranked }, null, 2)
+    JSON.stringify({ updated: now, stats, tokens: ranked }, null, 2)
   );
-  console.log("Done.");
+  console.log("Done. stats:", stats);
 }
 
 main().catch((err) => {
