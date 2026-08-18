@@ -9,19 +9,28 @@
     body { background: #0a0a0a; color: #e5e5e5; margin: 0; }
     .pos { color: #4ade80; }
     .neg { color: #f87171; }
+    .muted { color: #737373; }
     table {
       table-layout: fixed;
       width: 100%;
-      min-width: 1100px;
+      min-width: 1000px;
       font-variant-numeric: tabular-nums;
     }
     th, td {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      padding: 0.55rem 0.5rem;
+      padding: 0.5rem 0.45rem;
       vertical-align: middle;
       text-align: left;
+    }
+    td.chg, th.chg { white-space: normal; }
+    .chg-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.1rem;
+      font-size: 0.72rem;
+      line-height: 1.25;
     }
     .token-cell {
       display: flex;
@@ -196,7 +205,7 @@
       <p class="text-sm text-neutral-400 leading-snug">
         Top tokens on
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
-        by LP value
+        by LP value · pool balance % (ETH / token)
       </p>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -229,17 +238,17 @@
       <table class="text-sm">
         <colgroup>
           <col style="width:3%" />
-          <col style="width:14%" />
-          <col style="width:9%" />
+          <col style="width:15%" />
+          <col style="width:10%" />
           <col style="width:8%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
+          <col style="width:10%" />
           <col style="width:9%" />
           <col style="width:9%" />
           <col style="width:9%" />
-          <col style="width:9%" />
-          <col style="width:9%" />
-          <col style="width:9%" />
-          <col style="width:8%" />
-          <col style="width:4%" />
+          <col style="width:5%" />
         </colgroup>
         <thead class="bg-neutral-900 text-neutral-400 text-xs">
           <tr>
@@ -248,9 +257,9 @@
             <th>LP Value</th>
             <th>ETH</th>
             <th>Token side</th>
-            <th>24h</th>
-            <th>7d</th>
-            <th>30d</th>
+            <th class="chg">24h</th>
+            <th class="chg">7d</th>
+            <th class="chg">30d</th>
             <th>Fdv</th>
             <th>Volume</th>
             <th>Price</th>
@@ -319,14 +328,23 @@
       return "$" + x.toFixed(12);
     };
 
-    const fmtChange = (usd, pct) => {
-      if (usd == null && pct == null) return "—";
-      const v = usd ?? pct;
+    const fmtPct = (pct) => {
+      if (pct == null || Number.isNaN(Number(pct))) return null;
+      const v = Number(pct);
       const cls = v >= 0 ? "pos" : "neg";
       const sign = v >= 0 ? "+" : "";
-      const u = usd != null ? sign + fmtUsd(Math.abs(usd)) : "";
-      const p = pct != null ? ` (${sign}${Number(pct).toFixed(1)}%)` : "";
-      return `<span class="${cls}">${u}${p}</span>`;
+      return `<span class="${cls}">${sign}${v.toFixed(1)}%</span>`;
+    };
+
+    /** Stacked ETH% + Tok% for one timeframe */
+    const fmtSideChg = (ethPct, tokPct) => {
+      const e = fmtPct(ethPct);
+      const t = fmtPct(tokPct);
+      if (!e && !t) return "—";
+      return `<div class="chg-stack">
+        <span>${e ? e + " ETH" : '<span class="muted">— ETH</span>'}</span>
+        <span>${t ? t + " TOK" : '<span class="muted">— TOK</span>'}</span>
+      </div>`;
     };
 
     function tokenLogo(t) {
@@ -383,9 +401,9 @@
             <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
             <td>${fmtEth(t.eth_side)}</td>
             <td>${fmtTok(t.token_side)}</td>
-            <td>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
-            <td>${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
-            <td>${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>
             <td>${fmtUsd(t.fdv)}</td>
             <td>${fmtUsd(t.volume_24h)}</td>
             <td>${fmtPrice(t.price)}</td>
@@ -413,7 +431,9 @@
             </div>
             <div class="m-row"><span class="m-label">ETH side</span><span>${fmtEth(t.eth_side)}</span></div>
             <div class="m-row"><span class="m-label">Token side</span><span>${fmtTok(t.token_side)}</span></div>
-            <div class="m-row"><span class="m-label">24h LP</span><span>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</span></div>
+            <div class="m-row"><span class="m-label">24h</span><span>${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</span></div>
+            <div class="m-row"><span class="m-label">7d</span><span>${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</span></div>
+            <div class="m-row"><span class="m-label">30d</span><span>${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</span></div>
             <div class="m-row"><span class="m-label">FDV</span><span>${fmtUsd(t.fdv)}</span></div>
             <div class="m-row"><span class="m-label">Vol 24h</span><span>${fmtUsd(t.volume_24h)}</span></div>
             <div class="m-row"><span class="m-label">Price</span><span>${fmtPrice(t.price)}</span></div>
