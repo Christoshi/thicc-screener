@@ -197,7 +197,9 @@ async function fetchPoolSides(poolId) {
           PoolEvent {
             Liquidity {
               AmountCurrencyA
+              AmountCurrencyAInUSD
               AmountCurrencyB
+              AmountCurrencyBInUSD
             }
           }
         }
@@ -236,10 +238,14 @@ async function fetchPoolSides(poolId) {
       if (!row) return null;
       const eth = Number(row.AmountCurrencyA);
       const tok = Number(row.AmountCurrencyB);
+      const ethUsd = Number(row.AmountCurrencyAInUSD);
+      const tokUsd = Number(row.AmountCurrencyBInUSD);
       if (!Number.isFinite(eth) && !Number.isFinite(tok)) return null;
       return {
         eth_side: Number.isFinite(eth) ? +eth.toFixed(6) : null,
         token_side: Number.isFinite(tok) ? +tok.toFixed(4) : null,
+        eth_side_usd: Number.isFinite(ethUsd) && ethUsd > 0 ? +ethUsd.toFixed(2) : null,
+        token_side_usd: Number.isFinite(tokUsd) && tokUsd > 0 ? +tokUsd.toFixed(2) : null,
       };
     } catch (e) {
       console.log("  bitquery fail", e.message);
@@ -389,6 +395,8 @@ async function main() {
       if (sides) {
         t.eth_side = sides.eth_side;
         t.token_side = sides.token_side;
+        t.eth_side_usd = sides.eth_side_usd;
+        t.token_side_usd = sides.token_side_usd;
         ok++;
       }
       await new Promise((r) => setTimeout(r, 3000));
