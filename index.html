@@ -12,14 +12,14 @@
     table {
       table-layout: fixed;
       width: 100%;
-      min-width: 900px;
+      min-width: 1100px;
       font-variant-numeric: tabular-nums;
     }
     th, td {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      padding: 0.55rem 0.6rem;
+      padding: 0.55rem 0.5rem;
       vertical-align: middle;
       text-align: left;
     }
@@ -112,7 +112,36 @@
     .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    /* Mobile cards */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.6rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 640px) {
+      .stats { grid-template-columns: repeat(4, 1fr); }
+    }
+    .stat-card {
+      background: #111;
+      border: 1px solid #262626;
+      border-radius: 0.75rem;
+      padding: 0.75rem 0.9rem;
+    }
+    .stat-label {
+      font-size: 0.7rem;
+      color: #737373;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .stat-value {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #e5e5e5;
+      margin-top: 0.2rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-value.accent { color: #34d399; }
+
     .mobile-list { display: none; }
     .m-card {
       border: 1px solid #262626;
@@ -163,7 +192,7 @@
   </nav>
 
   <div class="max-w-[1400px] mx-auto px-3 py-4 sm:p-4 md:p-6">
-    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-3 mb-5 sm:mb-8">
+    <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-end sm:justify-between gap-3 mb-4">
       <p class="text-sm text-neutral-400 leading-snug">
         Top tokens on
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
@@ -177,25 +206,48 @@
       </div>
     </div>
 
+    <div class="stats" id="stats">
+      <div class="stat-card">
+        <div class="stat-label">Total LP</div>
+        <div class="stat-value accent" id="stat-lp">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total ETH in pools</div>
+        <div class="stat-value" id="stat-eth">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">24h Volume</div>
+        <div class="stat-value" id="stat-vol">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Pools tracked</div>
+        <div class="stat-value" id="stat-pools">—</div>
+      </div>
+    </div>
+
     <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800 -mx-0">
       <table class="text-sm">
         <colgroup>
+          <col style="width:3%" />
+          <col style="width:14%" />
+          <col style="width:9%" />
+          <col style="width:8%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:9%" />
+          <col style="width:8%" />
           <col style="width:4%" />
-          <col style="width:16%" />
-          <col style="width:10%" />
-          <col style="width:11%" />
-          <col style="width:11%" />
-          <col style="width:11%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
-          <col style="width:7%" />
         </colgroup>
         <thead class="bg-neutral-900 text-neutral-400 text-xs">
           <tr>
             <th>#</th>
             <th>Token</th>
             <th>LP Value</th>
+            <th>ETH</th>
+            <th>Token side</th>
             <th>24h</th>
             <th>7d</th>
             <th>30d</th>
@@ -239,6 +291,25 @@
       return "$" + x.toFixed(6);
     };
 
+    const fmtEth = (n) => {
+      if (n == null || Number.isNaN(Number(n))) return "—";
+      const x = Number(n);
+      if (x >= 100) return x.toFixed(1);
+      if (x >= 1) return x.toFixed(2);
+      if (x >= 0.01) return x.toFixed(4);
+      return x.toFixed(6);
+    };
+
+    const fmtTok = (n) => {
+      if (n == null || Number.isNaN(Number(n))) return "—";
+      const x = Number(n);
+      if (x >= 1e9) return (x / 1e9).toFixed(2) + "B";
+      if (x >= 1e6) return (x / 1e6).toFixed(2) + "M";
+      if (x >= 1e3) return (x / 1e3).toFixed(1) + "k";
+      if (x >= 1) return x.toFixed(2);
+      return x.toFixed(4);
+    };
+
     const fmtPrice = (n) => {
       if (n == null || Number.isNaN(Number(n))) return "—";
       const x = Number(n);
@@ -278,6 +349,15 @@
       return Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     }
 
+    function renderStats(stats) {
+      document.getElementById("stat-lp").textContent = fmtUsd(stats?.total_lp_usd);
+      document.getElementById("stat-eth").textContent =
+        stats?.total_eth_side != null ? fmtEth(stats.total_eth_side) + " ETH" : "—";
+      document.getElementById("stat-vol").textContent = fmtUsd(stats?.total_volume_24h);
+      document.getElementById("stat-pools").textContent =
+        stats?.pools != null ? String(stats.pools) : "—";
+    }
+
     function render() {
       const start = page * PAGE_SIZE;
       const slice = filtered.slice(start, start + PAGE_SIZE);
@@ -301,6 +381,8 @@
               </div>
             </td>
             <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
+            <td>${fmtEth(t.eth_side)}</td>
+            <td>${fmtTok(t.token_side)}</td>
             <td>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</td>
             <td>${fmtChange(t.lp_change_7d, t.lp_change_7d_pct)}</td>
             <td>${fmtChange(t.lp_change_30d, t.lp_change_30d_pct)}</td>
@@ -329,6 +411,8 @@
               </div>
               <div class="text-emerald-400 font-semibold text-sm shrink-0">${fmtUsd(t.lp_value)}</div>
             </div>
+            <div class="m-row"><span class="m-label">ETH side</span><span>${fmtEth(t.eth_side)}</span></div>
+            <div class="m-row"><span class="m-label">Token side</span><span>${fmtTok(t.token_side)}</span></div>
             <div class="m-row"><span class="m-label">24h LP</span><span>${fmtChange(t.lp_change_24h, t.lp_change_24h_pct)}</span></div>
             <div class="m-row"><span class="m-label">FDV</span><span>${fmtUsd(t.fdv)}</span></div>
             <div class="m-row"><span class="m-label">Vol 24h</span><span>${fmtUsd(t.volume_24h)}</span></div>
@@ -367,6 +451,7 @@
       allTokens = data.tokens || [];
       filtered = allTokens.slice();
       page = 0;
+      renderStats(data.stats || {});
       render();
     }
 
