@@ -25,13 +25,15 @@
       text-align: left;
     }
     td.chg, th.chg { white-space: normal; }
-    .chg-stack {
+    .chg-stack, .amt-stack {
       display: flex;
       flex-direction: column;
       gap: 0.1rem;
-      font-size: 0.72rem;
       line-height: 1.25;
     }
+    .chg-stack { font-size: 0.72rem; }
+    .amt-stack { font-size: 0.8rem; }
+    .amt-usd { font-size: 0.68rem; color: #737373; }
     .token-cell {
       display: flex;
       align-items: center;
@@ -205,7 +207,7 @@
       <p class="text-sm text-neutral-400 leading-snug">
         Top tokens on
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
-        by LP value · pool balance % (ETH / token)
+        by LP value
       </p>
       <div class="search-wrap">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -240,7 +242,7 @@
           <col style="width:3%" />
           <col style="width:15%" />
           <col style="width:10%" />
-          <col style="width:8%" />
+          <col style="width:9%" />
           <col style="width:10%" />
           <col style="width:10%" />
           <col style="width:10%" />
@@ -256,7 +258,7 @@
             <th>Token</th>
             <th>LP Value</th>
             <th>ETH</th>
-            <th>Token side</th>
+            <th>Token</th>
             <th class="chg">24h</th>
             <th class="chg">7d</th>
             <th class="chg">30d</th>
@@ -336,14 +338,40 @@
       return `<span class="${cls}">${sign}${v.toFixed(1)}%</span>`;
     };
 
-    /** Stacked ETH% + Tok% for one timeframe */
-    const fmtSideChg = (ethPct, tokPct) => {
+    const fmtSideChg = (ethPct, tokPct, symbol) => {
+      const tick = (symbol || "TOK").slice(0, 8);
       const e = fmtPct(ethPct);
       const t = fmtPct(tokPct);
       if (!e && !t) return "—";
       return `<div class="chg-stack">
         <span>${e ? e + " ETH" : '<span class="muted">— ETH</span>'}</span>
-        <span>${t ? t + " TOK" : '<span class="muted">— TOK</span>'}</span>
+        <span>${t ? t + " " + tick : '<span class="muted">— ' + tick + '</span>'}</span>
+      </div>`;
+    };
+
+    const fmtEthCell = (t) => {
+      if (t.eth_side == null || Number.isNaN(Number(t.eth_side))) return "—";
+      const usd =
+        t.eth_side_usd != null && !Number.isNaN(Number(t.eth_side_usd))
+          ? fmtUsd(t.eth_side_usd)
+          : null;
+      return `<div class="amt-stack">
+        <span>${fmtEth(t.eth_side)}</span>
+        ${usd ? `<span class="amt-usd">${usd}</span>` : ""}
+      </div>`;
+    };
+
+    const fmtTokenCell = (t) => {
+      if (t.token_side == null || Number.isNaN(Number(t.token_side))) return "—";
+      let usd = null;
+      if (t.token_side_usd != null && !Number.isNaN(Number(t.token_side_usd))) {
+        usd = fmtUsd(t.token_side_usd);
+      } else if (t.price != null && Number(t.price) > 0) {
+        usd = fmtUsd(Number(t.token_side) * Number(t.price));
+      }
+      return `<div class="amt-stack">
+        <span>${fmtTok(t.token_side)}</span>
+        ${usd ? `<span class="amt-usd">${usd}</span>` : ""}
       </div>`;
     };
 
@@ -399,11 +427,11 @@
               </div>
             </td>
             <td class="font-medium text-emerald-400">${fmtUsd(t.lp_value)}</td>
-            <td>${fmtEth(t.eth_side)}</td>
-            <td>${fmtTok(t.token_side)}</td>
-            <td class="chg">${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</td>
-            <td class="chg">${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>
-            <td class="chg">${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>
+            <td>${fmtEthCell(t)}</td>
+            <td>${fmtTokenCell(t)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct, t.symbol)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</td>
+            <td class="chg">${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</td>
             <td>${fmtUsd(t.fdv)}</td>
             <td>${fmtUsd(t.volume_24h)}</td>
             <td>${fmtPrice(t.price)}</td>
@@ -429,11 +457,11 @@
               </div>
               <div class="text-emerald-400 font-semibold text-sm shrink-0">${fmtUsd(t.lp_value)}</div>
             </div>
-            <div class="m-row"><span class="m-label">ETH side</span><span>${fmtEth(t.eth_side)}</span></div>
-            <div class="m-row"><span class="m-label">Token side</span><span>${fmtTok(t.token_side)}</span></div>
-            <div class="m-row"><span class="m-label">24h</span><span>${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</span></div>
-            <div class="m-row"><span class="m-label">7d</span><span>${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</span></div>
-            <div class="m-row"><span class="m-label">30d</span><span>${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</span></div>
+            <div class="m-row"><span class="m-label">ETH</span><span>${fmtEthCell(t)}</span></div>
+            <div class="m-row"><span class="m-label">Token</span><span>${fmtTokenCell(t)}</span></div>
+            <div class="m-row"><span class="m-label">24h</span><span>${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct, t.symbol)}</span></div>
+            <div class="m-row"><span class="m-label">7d</span><span>${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</span></div>
+            <div class="m-row"><span class="m-label">30d</span><span>${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</span></div>
             <div class="m-row"><span class="m-label">FDV</span><span>${fmtUsd(t.fdv)}</span></div>
             <div class="m-row"><span class="m-label">Vol 24h</span><span>${fmtUsd(t.volume_24h)}</span></div>
             <div class="m-row"><span class="m-label">Price</span><span>${fmtPrice(t.price)}</span></div>
