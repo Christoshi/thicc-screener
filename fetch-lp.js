@@ -34,11 +34,16 @@ const TOPIC_AUCTION_CREATED =
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
+const COUNTS_BLOCKS_PER_RUN = 120_000; // ~3.3h of chain time @ 0.1s blocks
 const ENRICH_CAP = 60;
-const LOG_CHUNK = 10_000;
+const LOG_CHUNK = 20_000; // fewer requests
+const LOG_DELAY_MS = 700;
+const RETRY_MAX = 4;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 const WETH_RH = "0x0bd7d308f8e1639fab988df18a8011f41eacad73";
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -118,30 +123,47 @@ function logTsMs(log) {
   return n < 1e12 ? n * 1000 : n;
 }
 
+function isRateLimited(json) {
+  const msg = String(json?.message || json?.result || "").toLowerCase();
+  return msg.includes("too many requests") || msg.includes("rate limit");
+}
+
 async function fetchLogsChunk(address, topic0, fromBlock, toBlock) {
   const url =
     `${BLOCKSCOUT}?module=logs&action=getLogs` +
     `&fromBlock=${fromBlock}&toBlock=${toBlock}` +
     `&address=${address.toLowerCase()}&topic0=${topic0}`;
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "thicc-screener/1.0" },
-    });
-    const json = await res.json();
-    if (!Array.isArray(json.result)) {
+
+  for (let attempt = 1; attempt <= RETRY_MAX; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { "User-Agent": "thicc-screener/1.0" },
+      });
+      const json = await res.json();
+      if (Array.isArray(json.result)) return { logs: json.result, ok: true };
+
+      if (isRateLimited(json)) {
+        const wait = 3000 * attempt;
+        console.log(
+          `  rate-limit ${address.slice(0, 12)} ${fromBlock} attempt ${attempt}/${RETRY_MAX}, wait ${wait}ms`
+        );
+        await sleep(wait);
+        continue;
+      }
+
       console.log(
         "  log empty/err",
         address.slice(0, 12),
         fromBlock,
         json.message || json.result || res.status
       );
-      return [];
+      return { logs: [], ok: false };
+    } catch (e) {
+      console.log("  log err", address.slice(0, 12), fromBlock, e.message);
+      await sleep(1500 * attempt);
     }
-    return json.result;
-  } catch (e) {
-    console.log("  log err", address.slice(0, 12), fromBlock, e.message);
-    return [];
   }
+  return { logs: [], ok: false };
 }
 
 async function fetchLogsForRange(fromBlock, toBlock) {
@@ -150,32 +172,40 @@ async function fetchLogsForRange(fromBlock, toBlock) {
     let start = fromBlock;
     while (start <= toBlock) {
       const end = Math.min(start + LOG_CHUNK - 1, toBlock);
-      const logs = await fetchLogsChunk(addr, TOPIC_TOKEN_LAUNCHED, start, end);
+      const { logs } = await fetchLogsChunk(addr, TOPIC_TOKEN_LAUNCHED, start, end);
       for (const log of logs) {
         const d = decodeTokenLaunched(log);
         if (d) found.push({ ...d, launchpad: addr.toLowerCase() });
       }
-      await new Promise((r) => setTimeout(r, 200));
+      await sleep(LOG_DELAY_MS);
       start = end + 1;
     }
   }
   return found;
 }
 
+/** Returns { timestamps, okChunks, failChunks } */
 async function collectTimestamps(address, topic0, fromBlock, toBlock) {
   const ts = [];
+  let okChunks = 0;
+  let failChunks = 0;
   let start = fromBlock;
   while (start <= toBlock) {
     const end = Math.min(start + LOG_CHUNK - 1, toBlock);
-    const logs = await fetchLogsChunk(address, topic0, start, end);
-    for (const log of logs) {
-      const t = logTsMs(log);
-      if (t) ts.push(t);
+    const { logs, ok } = await fetchLogsChunk(address, topic0, start, end);
+    if (ok) {
+      okChunks++;
+      for (const log of logs) {
+        const t = logTsMs(log);
+        if (t) ts.push(t);
+      }
+    } else {
+      failChunks++;
     }
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(LOG_DELAY_MS);
     start = end + 1;
   }
-  return ts;
+  return { timestamps: ts, okChunks, failChunks };
 }
 
 async function loadLaunchesState() {
@@ -390,7 +420,7 @@ async function fetchAllDexSides(ranked) {
         byToken.get(addr).push(p);
       }
     }
-    await new Promise((r) => setTimeout(r, 250));
+    await sleep(250);
   }
 
   let ok = 0;
@@ -492,36 +522,56 @@ async function main() {
       await fs.writeFile(LAUNCHES_PATH, JSON.stringify(state, null, 2));
     }
 
-    // Tip-first: empty or stalled counts jump near head so 24h/7d fill fast
+    // Tip-first when empty / stalled
     if (
       !counts.lastScannedBlock ||
       counts.lastScannedBlock < counts.startBlock - 1 ||
       (counts.total.length === 0 &&
         counts.crowd.length === 0 &&
-        counts.lastScannedBlock < latest - BLOCKS_PER_RUN * 2)
+        counts.lastScannedBlock < latest - COUNTS_BLOCKS_PER_RUN * 2)
     ) {
-      counts.lastScannedBlock = Math.max(counts.startBlock - 1, latest - BLOCKS_PER_RUN);
+      counts.lastScannedBlock = Math.max(
+        counts.startBlock - 1,
+        latest - COUNTS_BLOCKS_PER_RUN
+      );
       console.log("  launch-counts cursor reset near tip →", counts.lastScannedBlock);
     }
 
     const cFrom = counts.lastScannedBlock + 1;
-    const cTo = Math.min(cFrom + BLOCKS_PER_RUN - 1, latest);
+    const cTo = Math.min(cFrom + COUNTS_BLOCKS_PER_RUN - 1, latest);
     if (cFrom <= latest) {
       console.log(`Scanning launch counts ${cFrom} → ${cTo}`);
       let newTotal = 0;
       let newCrowd = 0;
+      let okChunks = 0;
+      let failChunks = 0;
+
       for (const addr of ENTRY_CONTRACTS) {
-        const ts = await collectTimestamps(addr, TOPIC_TOKEN_CREATED, cFrom, cTo);
-        counts.total.push(...ts);
-        newTotal += ts.length;
+        const r = await collectTimestamps(addr, TOPIC_TOKEN_CREATED, cFrom, cTo);
+        counts.total.push(...r.timestamps);
+        newTotal += r.timestamps.length;
+        okChunks += r.okChunks;
+        failChunks += r.failChunks;
       }
       {
-        const ts = await collectTimestamps(CCA_FACTORY, TOPIC_AUCTION_CREATED, cFrom, cTo);
-        counts.crowd.push(...ts);
-        newCrowd += ts.length;
+        const r = await collectTimestamps(CCA_FACTORY, TOPIC_AUCTION_CREATED, cFrom, cTo);
+        counts.crowd.push(...r.timestamps);
+        newCrowd += r.timestamps.length;
+        okChunks += r.okChunks;
+        failChunks += r.failChunks;
       }
+
       console.log("  new TokenCreated:", newTotal, "AuctionCreated:", newCrowd);
-      counts.lastScannedBlock = cTo;
+      console.log("  chunks ok/fail:", okChunks, failChunks);
+
+      // Only advance cursor if majority of chunks succeeded
+      if (failChunks === 0 || okChunks >= failChunks) {
+        counts.lastScannedBlock = cTo;
+        console.log("  counts cursor →", counts.lastScannedBlock);
+      } else {
+        console.log("  counts cursor NOT advanced (too many rate limits)");
+      }
+
       counts.total = [...new Set(counts.total)].sort((a, b) => a - b);
       counts.crowd = [...new Set(counts.crowd)].sort((a, b) => a - b);
       await fs.writeFile(LAUNCH_COUNTS_PATH, JSON.stringify(counts));
@@ -590,7 +640,7 @@ async function main() {
       const data = await trpc("curve.getLaunchByAddress", { tokenAddress: token });
       const m = mapLaunch(data, "curve");
       if (m && (m.lp_value > 0 || m.fdv > 0)) map.set(m.token, m);
-      await new Promise((r) => setTimeout(r, 120));
+      await sleep(120);
     } catch {
       /* skip */
     }
