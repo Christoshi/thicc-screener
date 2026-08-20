@@ -1,9 +1,10 @@
-// fetch-lp.js — pools.trade backfill + tRPC + DexScreener sides (all top 100) + CoinGecko ETH USD
+// fetch-lp.js — pools.trade backfill + tRPC + DexScreener sides + CoinGecko + launch counts
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
 const HISTORY_PATH = "data/history.json";
 const LAUNCHES_PATH = "data/launches.json";
+const LAUNCH_COUNTS_PATH = "data/launch-counts.json";
 const TOP_N = 100;
 
 const MS_24H = 24 * 60 * 60 * 1000;
@@ -19,13 +20,25 @@ const LAUNCHPADS = [
 const TOPIC_TOKEN_LAUNCHED =
   "0x3b3d2bafdcae274a232217e1f80ee4305d3af6aa25c8b14b1681bd68d18042a4";
 
+const ENTRY_CONTRACTS = [
+  "0x0000ffffbe8efe702c8703ae3477ff5de3d319c0",
+  "0x00004c4ccc709ef590f7c81102c0689f0263d4e9",
+];
+const TOPIC_TOKEN_CREATED =
+  "0x2e2b3f61b70d2d131b2a807371103cc98d51adcaa5e9a8f9c32658ad8426e74e";
+
+const CCA_FACTORY = "0x000000001f26a0044baa66024e7b6599c61963f8";
+const TOPIC_AUCTION_CREATED =
+  "0x7ede475fad18ccf0039f2b956c4d43a8b4ed0853de4daaa8ae25299f331ae3b9";
+
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const ENRICH_CAP = 60;
+const LOG_CHUNK = 10_000;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
-const WETH_RH = "0x0bd7d308f8e1639fab988df18a8011f41eacad73"; // common WETH on Robinhood
+const WETH_RH = "0x0bd7d308f8e1639fab988df18a8011f41eacad73";
 
 async function trpc(procedure, input) {
   const q = encodeURIComponent(JSON.stringify({ "0": input }));
@@ -93,34 +106,68 @@ function decodeTokenLaunched(log) {
   return { token, poolId, blockNumber: bn, txHash: log.transactionHash || null };
 }
 
+function logTsMs(log) {
+  const raw = log.timeStamp ?? log.timestamp;
+  if (raw == null) return null;
+  if (typeof raw === "string" && raw.startsWith("0x")) {
+    const s = parseInt(raw, 16);
+    return Number.isFinite(s) ? s * 1000 : null;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n < 1e12 ? n * 1000 : n;
+}
+
+async function fetchLogsChunk(address, topic0, fromBlock, toBlock) {
+  const url =
+    `${BLOCKSCOUT}?module=logs&action=getLogs` +
+    `&fromBlock=${fromBlock}&toBlock=${toBlock}` +
+    `&address=${address}&topic0=${topic0}`;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "thicc-screener/1.0" },
+    });
+    const json = await res.json();
+    return Array.isArray(json.result) ? json.result : [];
+  } catch (e) {
+    console.log("  log err", address.slice(0, 12), fromBlock, e.message);
+    return [];
+  }
+}
+
 async function fetchLogsForRange(fromBlock, toBlock) {
   const found = [];
   for (const addr of LAUNCHPADS) {
     let start = fromBlock;
     while (start <= toBlock) {
-      const end = Math.min(start + 15_000 - 1, toBlock);
-      const url =
-        `${BLOCKSCOUT}?module=logs&action=getLogs` +
-        `&fromBlock=${start}&toBlock=${end}` +
-        `&address=${addr}&topic0=${TOPIC_TOKEN_LAUNCHED}`;
-      try {
-        const res = await fetch(url, {
-          headers: { "User-Agent": "thicc-screener/1.0" },
-        });
-        const json = await res.json();
-        const logs = Array.isArray(json.result) ? json.result : [];
-        for (const log of logs) {
-          const d = decodeTokenLaunched(log);
-          if (d) found.push({ ...d, launchpad: addr.toLowerCase() });
-        }
-      } catch (e) {
-        console.log("  log err", addr.slice(0, 10), start, e.message);
+      const end = Math.min(start + LOG_CHUNK - 1, toBlock);
+      const logs = await fetchLogsChunk(addr, TOPIC_TOKEN_LAUNCHED, start, end);
+      for (const log of logs) {
+        const d = decodeTokenLaunched(log);
+        if (d) found.push({ ...d, launchpad: addr.toLowerCase() });
       }
       await new Promise((r) => setTimeout(r, 200));
       start = end + 1;
     }
   }
   return found;
+}
+
+/** Collect event timestamps (ms) for one address+topic over a block range */
+async function collectTimestamps(address, topic0, fromBlock, toBlock) {
+  const ts = [];
+  let start = fromBlock;
+  while (start <= toBlock) {
+    const end = Math.min(start + LOG_CHUNK - 1, toBlock);
+    const logs = await fetchLogsChunk(address, topic0, start, end);
+    for (const log of logs) {
+      const t = logTsMs(log);
+      if (t) ts.push(t);
+    }
+    await new Promise((r) => setTimeout(r, 200));
+    start = end + 1;
+  }
+  return ts;
 }
 
 async function loadLaunchesState() {
@@ -141,6 +188,41 @@ async function loadLaunchesState() {
       tokens: {},
     };
   }
+}
+
+async function loadLaunchCounts() {
+  try {
+    const raw = await fs.readFile(LAUNCH_COUNTS_PATH, "utf-8");
+    const s = JSON.parse(raw);
+    return {
+      lastScannedBlock: s.lastScannedBlock ?? START_BLOCK - 1,
+      startBlock: s.startBlock ?? START_BLOCK,
+      total: Array.isArray(s.total) ? s.total : [],
+      crowd: Array.isArray(s.crowd) ? s.crowd : [],
+    };
+  } catch {
+    return {
+      lastScannedBlock: START_BLOCK - 1,
+      startBlock: START_BLOCK,
+      total: [],
+      crowd: [],
+    };
+  }
+}
+
+function countSince(arr, sinceMs) {
+  let n = 0;
+  for (const t of arr) if (t >= sinceMs) n++;
+  return n;
+}
+
+function launchBuckets(arr, now) {
+  return {
+    h24: countSince(arr, now - MS_24H),
+    d7: countSince(arr, now - MS_7D),
+    d30: countSince(arr, now - MS_30D),
+    all: arr.length,
+  };
 }
 
 async function loadHistory() {
@@ -200,7 +282,6 @@ function isEthAddress(addr) {
   return a === ZERO || a === WETH_RH;
 }
 
-/** Pick best ETH-paired pool from DexScreener pairs for a token */
 function pickEthPair(pairs, tokenAddr, preferredPoolId) {
   if (!Array.isArray(pairs) || !pairs.length) return null;
   const tok = tokenAddr.toLowerCase();
@@ -216,16 +297,14 @@ function pickEthPair(pairs, tokenAddr, preferredPoolId) {
 
   if (!ethPairs.length) return null;
 
-  // Prefer exact pool_id match (v4 pool id often = pairAddress on DexScreener)
   if (preferredPoolId) {
     const pid = preferredPoolId.toLowerCase().replace(/^0x/, "");
-    const match = ethPairs.find((p) =>
-      (p.pairAddress || "").toLowerCase().replace(/^0x/, "") === pid
+    const match = ethPairs.find(
+      (p) => (p.pairAddress || "").toLowerCase().replace(/^0x/, "") === pid
     );
     if (match) return match;
   }
 
-  // Highest USD liquidity
   ethPairs.sort(
     (a, b) => Number(b.liquidity?.usd || 0) - Number(a.liquidity?.usd || 0)
   );
@@ -260,7 +339,6 @@ function sidesFromPair(pair, tokenAddr) {
   };
 }
 
-/** Batch fetch DexScreener pairs for up to 30 token addresses */
 async function fetchDexBatch(addresses) {
   const list = addresses.map((a) => a.toLowerCase()).filter(Boolean);
   if (!list.length) return [];
@@ -274,7 +352,6 @@ async function fetchDexBatch(addresses) {
       return [];
     }
     const json = await res.json();
-    // tokens/v1 returns an array of pair objects
     if (Array.isArray(json)) return json;
     if (Array.isArray(json?.pairs)) return json.pairs;
     return [];
@@ -285,7 +362,7 @@ async function fetchDexBatch(addresses) {
 }
 
 async function fetchAllDexSides(ranked) {
-  const byToken = new Map(); // token -> pairs[]
+  const byToken = new Map();
   const chunks = [];
   for (let i = 0; i < ranked.length; i += 30) {
     chunks.push(ranked.slice(i, i + 30));
@@ -356,6 +433,7 @@ async function main() {
   const ethUsd = await fetchEthUsd();
 
   const state = await loadLaunchesState();
+  const counts = await loadLaunchCounts();
   let latest = 0;
   try {
     latest = await getLatestBlock();
@@ -404,6 +482,43 @@ async function main() {
         console.log(`Backfill progress ~${pct}% (cursor ${state.lastScannedBlock})`);
       }
       await fs.writeFile(LAUNCHES_PATH, JSON.stringify(state, null, 2));
+    }
+
+    // Launch counts scan (same window style, independent cursor)
+    if (!counts.lastScannedBlock || counts.lastScannedBlock < counts.startBlock - 1) {
+      counts.lastScannedBlock = counts.startBlock - 1;
+    }
+    const cFrom = counts.lastScannedBlock + 1;
+    const cTo = Math.min(cFrom + BLOCKS_PER_RUN - 1, latest);
+    if (cFrom <= latest) {
+      console.log(`Scanning launch counts ${cFrom} → ${cTo}`);
+      let newTotal = 0;
+      let newCrowd = 0;
+      for (const addr of ENTRY_CONTRACTS) {
+        const ts = await collectTimestamps(addr, TOPIC_TOKEN_CREATED, cFrom, cTo);
+        counts.total.push(...ts);
+        newTotal += ts.length;
+      }
+      {
+        const ts = await collectTimestamps(CCA_FACTORY, TOPIC_AUCTION_CREATED, cFrom, cTo);
+        counts.crowd.push(...ts);
+        newCrowd += ts.length;
+      }
+      console.log("  new TokenCreated:", newTotal, "AuctionCreated:", newCrowd);
+      counts.lastScannedBlock = cTo;
+      // Keep last ~45 days of timestamps to bound file size
+      const cutoff = Date.now() - 45 * MS_24H;
+      // Keep ALL for "all" count — only trim if file gets huge; for now keep everything
+      // but dedupe sort
+      counts.total = [...new Set(counts.total)].sort((a, b) => a - b);
+      counts.crowd = [...new Set(counts.crowd)].sort((a, b) => a - b);
+      await fs.writeFile(LAUNCH_COUNTS_PATH, JSON.stringify(counts));
+      console.log(
+        "  totals so far — TokenCreated:",
+        counts.total.length,
+        "Crowd:",
+        counts.crowd.length
+      );
     }
   }
 
@@ -483,7 +598,6 @@ async function main() {
   console.log("Ranked", ranked.length);
   if (ranked[0]) console.log("Top:", ranked[0].symbol, "LP $", ranked[0].lp_value);
 
-  // 1) Seed from previous run (fallback)
   for (const t of ranked) {
     const prev = prevSides.get(t.token);
     if (prev) {
@@ -492,12 +606,10 @@ async function main() {
     }
   }
 
-  // 2) Fresh sides from DexScreener for all top 100
   console.log("Fetching DexScreener sides for top", ranked.length, "...");
   const dexOk = await fetchAllDexSides(ranked);
   console.log("  dexscreener sides ok:", dexOk);
 
-  // 3) CoinGecko ETH $ + token $ from price
   for (const t of ranked) {
     if (t.eth_side != null && ethUsd != null) {
       t.eth_side_usd = +(t.eth_side * ethUsd).toFixed(2);
@@ -581,6 +693,16 @@ async function main() {
       ? +(((ethNow - ethThen) / ethThen) * 100).toFixed(2)
       : null;
 
+  // Instant = total TokenCreated − Crowd in each window
+  const totalB = launchBuckets(counts.total, now);
+  const crowdB = launchBuckets(counts.crowd, now);
+  const instantB = {
+    h24: Math.max(0, totalB.h24 - crowdB.h24),
+    d7: Math.max(0, totalB.d7 - crowdB.d7),
+    d30: Math.max(0, totalB.d30 - crowdB.d30),
+    all: Math.max(0, totalB.all - crowdB.all),
+  };
+
   const stats = {
     pools: ranked.length,
     total_lp_usd: +ranked.reduce((s, t) => s + (t.lp_value || 0), 0).toFixed(2),
@@ -590,6 +712,8 @@ async function main() {
     eth_usd: ethUsd,
     sides_tracked: withSides.length,
     sides_source: "dexscreener",
+    instant_launches: instantB,
+    crowd_launches: crowdB,
   };
 
   await fs.writeFile(HISTORY_PATH, JSON.stringify(history));
