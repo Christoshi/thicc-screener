@@ -122,13 +122,22 @@ async function fetchLogsChunk(address, topic0, fromBlock, toBlock) {
   const url =
     `${BLOCKSCOUT}?module=logs&action=getLogs` +
     `&fromBlock=${fromBlock}&toBlock=${toBlock}` +
-    `&address=${address}&topic0=${topic0}`;
+    `&address=${address.toLowerCase()}&topic0=${topic0}`;
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "thicc-screener/1.0" },
     });
     const json = await res.json();
-    return Array.isArray(json.result) ? json.result : [];
+    if (!Array.isArray(json.result)) {
+      console.log(
+        "  log empty/err",
+        address.slice(0, 12),
+        fromBlock,
+        json.message || json.result || res.status
+      );
+      return [];
+    }
+    return json.result;
   } catch (e) {
     console.log("  log err", address.slice(0, 12), fromBlock, e.message);
     return [];
@@ -153,7 +162,6 @@ async function fetchLogsForRange(fromBlock, toBlock) {
   return found;
 }
 
-/** Collect event timestamps (ms) for one address+topic over a block range */
 async function collectTimestamps(address, topic0, fromBlock, toBlock) {
   const ts = [];
   let start = fromBlock;
@@ -484,10 +492,18 @@ async function main() {
       await fs.writeFile(LAUNCHES_PATH, JSON.stringify(state, null, 2));
     }
 
-    // Launch counts scan (same window style, independent cursor)
-    if (!counts.lastScannedBlock || counts.lastScannedBlock < counts.startBlock - 1) {
-      counts.lastScannedBlock = counts.startBlock - 1;
+    // Tip-first: empty or stalled counts jump near head so 24h/7d fill fast
+    if (
+      !counts.lastScannedBlock ||
+      counts.lastScannedBlock < counts.startBlock - 1 ||
+      (counts.total.length === 0 &&
+        counts.crowd.length === 0 &&
+        counts.lastScannedBlock < latest - BLOCKS_PER_RUN * 2)
+    ) {
+      counts.lastScannedBlock = Math.max(counts.startBlock - 1, latest - BLOCKS_PER_RUN);
+      console.log("  launch-counts cursor reset near tip →", counts.lastScannedBlock);
     }
+
     const cFrom = counts.lastScannedBlock + 1;
     const cTo = Math.min(cFrom + BLOCKS_PER_RUN - 1, latest);
     if (cFrom <= latest) {
@@ -506,10 +522,6 @@ async function main() {
       }
       console.log("  new TokenCreated:", newTotal, "AuctionCreated:", newCrowd);
       counts.lastScannedBlock = cTo;
-      // Keep last ~45 days of timestamps to bound file size
-      const cutoff = Date.now() - 45 * MS_24H;
-      // Keep ALL for "all" count — only trim if file gets huge; for now keep everything
-      // but dedupe sort
       counts.total = [...new Set(counts.total)].sort((a, b) => a - b);
       counts.crowd = [...new Set(counts.crowd)].sort((a, b) => a - b);
       await fs.writeFile(LAUNCH_COUNTS_PATH, JSON.stringify(counts));
@@ -693,7 +705,6 @@ async function main() {
       ? +(((ethNow - ethThen) / ethThen) * 100).toFixed(2)
       : null;
 
-  // Instant = total TokenCreated − Crowd in each window
   const totalB = launchBuckets(counts.total, now);
   const crowdB = launchBuckets(counts.crowd, now);
   const instantB = {
