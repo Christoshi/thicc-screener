@@ -123,7 +123,7 @@
     .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    /* Stats */
+    /* Stats — uniform type scale */
     .stats {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -140,7 +140,7 @@
       background: linear-gradient(165deg, #161a18 0%, #101210 55%, #0c0e0d 100%);
       border: 1px solid #2a3330;
       border-radius: 0.65rem;
-      padding: 0.55rem 0.7rem;
+      padding: 0.65rem 0.75rem;
       box-shadow: 0 1px 0 rgba(52, 211, 153, 0.06) inset, 0 4px 16px rgba(0, 0, 0, 0.35);
       min-height: 0;
     }
@@ -148,48 +148,58 @@
       border-color: #3d4a44;
       box-shadow: 0 1px 0 rgba(52, 211, 153, 0.1) inset, 0 6px 20px rgba(0, 0, 0, 0.4);
     }
+    /* Title on every card */
     .stat-label {
-      font-size: 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 500;
       color: #8a9a92;
       letter-spacing: 0.02em;
       line-height: 1.2;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-bottom: 0.35rem;
     }
-    .stat-value {
-      font-size: 0.95rem;
+    /* Primary values (ETH total, overview numbers, launch counts) */
+    .stat-value,
+    .overview-row .v,
+    .stat-grid .v {
+      font-size: 0.9rem;
       font-weight: 600;
       color: #eef2f0;
-      margin-top: 0.14rem;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.3;
+    }
+    .stat-value { margin-top: 0; }
+    .stat-value.accent,
+    .overview-row .v.accent { color: #34d399; }
+    /* Secondary line (e.g. +0.7% 24h) */
+    .stat-sub {
+      font-size: 0.75rem;
+      margin-top: 0.2rem;
       font-variant-numeric: tabular-nums;
       line-height: 1.25;
     }
-    .stat-value.accent { color: #34d399; }
-    .stat-sub {
-      font-size: 0.62rem;
-      margin-top: 0.1rem;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.2;
+    /* Keys: Total LP, 24h, 7d, etc. */
+    .overview-row .k,
+    .stat-grid .k {
+      font-size: 0.75rem;
+      color: #6b7a72;
+      line-height: 1.3;
     }
     .stat-grid {
       display: grid;
       grid-template-columns: auto 1fr;
-      gap: 0.06rem 0.5rem;
-      margin-top: 0.18rem;
-      font-size: 0.7rem;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.4;
+      gap: 0.2rem 0.6rem;
+      margin-top: 0;
+      align-items: baseline;
     }
-    .stat-grid .k { color: #6b7a72; }
-    .stat-grid .v { color: #d8e0dc; text-align: right; font-weight: 500; }
-
-    /* Combined overview rows (desktop + mobile) */
+    .stat-grid .v { text-align: right; }
     .overview-rows {
       display: flex;
       flex-direction: column;
-      gap: 0.28rem;
-      margin-top: 0.2rem;
+      gap: 0.35rem;
+      margin-top: 0;
     }
     .overview-row {
       display: flex;
@@ -197,18 +207,7 @@
       align-items: baseline;
       gap: 0.5rem;
       font-variant-numeric: tabular-nums;
-      line-height: 1.25;
     }
-    .overview-row .k {
-      font-size: 0.68rem;
-      color: #6b7a72;
-    }
-    .overview-row .v {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: #eef2f0;
-    }
-    .overview-row .v.accent { color: #34d399; }
 
     .mobile-list { display: none; }
     .m-card {
@@ -245,10 +244,7 @@
       #search, .search-wrap { max-width: none; }
       .topnav a { font-size: 0.75rem; padding: 0.35rem 0.5rem; }
       .token-logo, .token-logo-fallback { width: 32px; height: 32px; }
-      .stat-card { padding: 0.45rem 0.55rem; }
-      .stat-value { font-size: 0.88rem; }
-      .stat-grid { font-size: 0.64rem; }
-      .overview-row .v { font-size: 0.82rem; }
+      .stat-card { padding: 0.55rem 0.6rem; }
     }
   </style>
 </head>
@@ -279,7 +275,6 @@
     </div>
 
     <div class="stats" id="stats">
-      <!-- Combined overview: Total LP · 24h Volume · Pools -->
       <div class="stat-card">
         <div class="stat-label">Overview</div>
         <div class="overview-rows">
