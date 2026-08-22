@@ -1,6 +1,6 @@
 {
   "backfillDone": true,
-  "lastScannedBlock": 43036235,
+  "lastScannedBlock": 43050888,
   "startBlock": 28519960,
   "tokens": {
     "0x87f1ed895b460c002e82075f1038e7f2ce4d51cd": {
@@ -269780,6 +269780,108 @@
       "poolId": "0xdda69506a25c6a89b2ed57c04924b6d163fbe5f338f4e0adf6ea2a70e9d132de",
       "blockNumber": 43035661,
       "launchpad": "0xad44d55e7f8337c3ce113fbb591486e85be104b2"
+    },
+    "0x04480884d19ce8095194cdc557355831f29e7ef4": {
+      "token": "0x04480884d19ce8095194cdc557355831f29e7ef4",
+      "poolId": "0x6b17d09658799c166b3623eaf07d09e25fd2c18be45c133f88472923d3395ff2",
+      "blockNumber": 43037430,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xfa221ec1bf41d1af00189e19758de3c3f488209c": {
+      "token": "0xfa221ec1bf41d1af00189e19758de3c3f488209c",
+      "poolId": "0xccfa274b1c39c7e7f274ed57a414210cb237c792f3d92fe61fa698115d8c1043",
+      "blockNumber": 43037450,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xa384c7b1d66bdf3e0e1592b26166fe99d845c04b": {
+      "token": "0xa384c7b1d66bdf3e0e1592b26166fe99d845c04b",
+      "poolId": "0x0207f9bdaf93df3b5f092d90c50e0f2a9fd4614e95c6bbb58d46e95eadbaa955",
+      "blockNumber": 43037531,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x1b155eed53710c8fdd4e8403346318fc199fecbf": {
+      "token": "0x1b155eed53710c8fdd4e8403346318fc199fecbf",
+      "poolId": "0x4ebaf6a2d469d97ebab9b15a16f7e163f9cdf03a305cfc03a36efa483805c457",
+      "blockNumber": 43038166,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x5246cc96bcd77a7cec95fc0c91209b0dcb141c01": {
+      "token": "0x5246cc96bcd77a7cec95fc0c91209b0dcb141c01",
+      "poolId": "0xdb299c09a8d47ea00b9b7c3b34da01fdfaf118dde1134e3816c8d1dfc68f8016",
+      "blockNumber": 43040422,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x11850f19af7f8c74838b025e0e203343d03e7144": {
+      "token": "0x11850f19af7f8c74838b025e0e203343d03e7144",
+      "poolId": "0xfe0571abec1921752c76469d0fbd3115ff3ea8bdf5cf70e10de11c6b196d65e2",
+      "blockNumber": 43042356,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xb31ec825e3fba270d0c5f06c59b088cfc7ba95cb": {
+      "token": "0xb31ec825e3fba270d0c5f06c59b088cfc7ba95cb",
+      "poolId": "0x4e345932c1b883de0bd7e359789af49115da12e1160a48f9bddf9741f72bdcfc",
+      "blockNumber": 43042762,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x8bf696de891a4ce854cc51a6e32674da61afdf08": {
+      "token": "0x8bf696de891a4ce854cc51a6e32674da61afdf08",
+      "poolId": "0xbf5955b49f28ae78deb4699540e0d920421945d642e3d48de3529f197a39ba9e",
+      "blockNumber": 43043974,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x8bf084166d0c99c5983503486e16b29ad464dd4d": {
+      "token": "0x8bf084166d0c99c5983503486e16b29ad464dd4d",
+      "poolId": "0x8cddb2c3bbce7bfd2a7a120b6693b28ea42d92d8c9320eaed9c6ba81e3e04600",
+      "blockNumber": 43044062,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x2f27f8bf36b3ecb690bfc2a9e12a4cb28509676b": {
+      "token": "0x2f27f8bf36b3ecb690bfc2a9e12a4cb28509676b",
+      "poolId": "0xd7445ec484d76425465b44cb56c2c1496333bff211100156f2ee3f3d4f16b212",
+      "blockNumber": 43044120,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x6866120e0a1f64ea2bae5f7f5da82a593d84ca80": {
+      "token": "0x6866120e0a1f64ea2bae5f7f5da82a593d84ca80",
+      "poolId": "0x65ff0212a91f5ebf5eb3fc578fedb9edbb76469de897215b97b4c31550ab15ac",
+      "blockNumber": 43045664,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x31c6f8be7faa451dc54851fd885567a98345c745": {
+      "token": "0x31c6f8be7faa451dc54851fd885567a98345c745",
+      "poolId": "0x1ee9673060062707b5c04137eaed4f5a218fadbd2d492901793b88ff7647ffe8",
+      "blockNumber": 43046865,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x732edd00407ad6b189bb9000ddadbc92082fd469": {
+      "token": "0x732edd00407ad6b189bb9000ddadbc92082fd469",
+      "poolId": "0x5b58f9c3b721871d718c33de25199a77182b94ddad24b91a2646703140d9ea8d",
+      "blockNumber": 43050223,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x8f5e7c5b1fd60a06a48167b8d0cd675f4fb127b9": {
+      "token": "0x8f5e7c5b1fd60a06a48167b8d0cd675f4fb127b9",
+      "poolId": "0x8b9fc162626901ca322235d405f5ee8d9c147d63bf8a9509fbeb45fc39898e41",
+      "blockNumber": 43050320,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x47815aa95b71bc25d06032f5e4ba1e67fbb3217c": {
+      "token": "0x47815aa95b71bc25d06032f5e4ba1e67fbb3217c",
+      "poolId": "0x4afb04ed9205f936edf2da24e808daf6fb01206f6b554e928ce4f5c9058be657",
+      "blockNumber": 43050515,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xd582aa910ce574bbed534004c08d3f366edab8a9": {
+      "token": "0xd582aa910ce574bbed534004c08d3f366edab8a9",
+      "poolId": "0xad71d2b142c5bd9a29e0c19b15ae23b3b914e0d7eebb7fda1e7646f866ac9562",
+      "blockNumber": 43050574,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x6475f43c12e0d4bd2c30d28b31953337fdde8df2": {
+      "token": "0x6475f43c12e0d4bd2c30d28b31953337fdde8df2",
+      "poolId": "0x4b4735236da90f4a33556c202ffcdc976bfdb0749456e43901dae77c1930cf6a",
+      "blockNumber": 43050592,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
     }
   }
 }
