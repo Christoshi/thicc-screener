@@ -16,6 +16,9 @@
       min-width: 1000px;
       font-variant-numeric: tabular-nums;
     }
+    table.hide-7d { min-width: 900px; }
+    table.hide-30d { min-width: 900px; }
+    table.hide-7d.hide-30d { min-width: 800px; }
     th, td {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -123,7 +126,6 @@
     .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-    /* Stats — uniform type scale */
     .stats {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -148,7 +150,6 @@
       border-color: #3d4a44;
       box-shadow: 0 1px 0 rgba(52, 211, 153, 0.1) inset, 0 6px 20px rgba(0, 0, 0, 0.4);
     }
-    /* Title on every card */
     .stat-label {
       font-size: 0.75rem;
       font-weight: 500;
@@ -160,7 +161,6 @@
       text-overflow: ellipsis;
       margin-bottom: 0.35rem;
     }
-    /* Primary values (ETH total, overview numbers, launch counts) */
     .stat-value,
     .overview-row .v,
     .stat-grid .v {
@@ -173,14 +173,12 @@
     .stat-value { margin-top: 0; }
     .stat-value.accent,
     .overview-row .v.accent { color: #34d399; }
-    /* Secondary line (e.g. +0.7% 24h) */
     .stat-sub {
       font-size: 0.75rem;
       margin-top: 0.2rem;
       font-variant-numeric: tabular-nums;
       line-height: 1.25;
     }
-    /* Keys: Total LP, 24h, 7d, etc. */
     .overview-row .k,
     .stat-grid .k {
       font-size: 0.75rem;
@@ -237,6 +235,9 @@
       text-decoration: none;
       font-weight: 600;
     }
+
+    table.hide-7d .col-7d,
+    table.hide-30d .col-30d { display: none; }
 
     @media (max-width: 767px) {
       .desktop-table { display: none !important; }
@@ -321,16 +322,16 @@
     </div>
 
     <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800 -mx-0">
-      <table class="text-sm">
-        <colgroup>
+      <table class="text-sm" id="token-table">
+        <colgroup id="colgroup">
           <col style="width:3%" />
           <col style="width:15%" />
           <col style="width:10%" />
           <col style="width:9%" />
           <col style="width:10%" />
           <col style="width:10%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
+          <col class="col-7d" style="width:10%" />
+          <col class="col-30d" style="width:10%" />
           <col style="width:9%" />
           <col style="width:9%" />
           <col style="width:9%" />
@@ -344,8 +345,8 @@
             <th>ETH</th>
             <th>Token</th>
             <th class="chg">24h</th>
-            <th class="chg">7d</th>
-            <th class="chg">30d</th>
+            <th class="chg col-7d">7d</th>
+            <th class="chg col-30d">30d</th>
             <th>Fdv</th>
             <th>Volume</th>
             <th>Price</th>
@@ -375,6 +376,36 @@
     let allTokens = [];
     let filtered = [];
     let page = 0;
+    let show7d = false;
+    let show30d = false;
+
+    const hasNum = (v) => v != null && v !== "" && !Number.isNaN(Number(v));
+
+    function has7dData(t) {
+      return (
+        hasNum(t.eth_change_7d_pct) ||
+        hasNum(t.token_change_7d_pct) ||
+        hasNum(t.lp_change_7d) ||
+        hasNum(t.lp_change_7d_pct)
+      );
+    }
+
+    function has30dData(t) {
+      return (
+        hasNum(t.eth_change_30d_pct) ||
+        hasNum(t.token_change_30d_pct) ||
+        hasNum(t.lp_change_30d) ||
+        hasNum(t.lp_change_30d_pct)
+      );
+    }
+
+    function updatePeriodFlags(list) {
+      show7d = list.some(has7dData);
+      show30d = list.some(has30dData);
+      const table = document.getElementById("token-table");
+      table.classList.toggle("hide-7d", !show7d);
+      table.classList.toggle("hide-30d", !show30d);
+    }
 
     const fmtUsd = (n) => {
       if (n == null || n === "" || Number.isNaN(Number(n))) return "—";
@@ -521,6 +552,7 @@
     }
 
     function render() {
+      updatePeriodFlags(filtered.length ? filtered : allTokens);
       const start = page * PAGE_SIZE;
       const slice = filtered.slice(start, start + PAGE_SIZE);
 
@@ -528,6 +560,14 @@
         .map((t, i) => {
           const rank = start + i + 1;
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
+          const cell7 =
+            show7d
+              ? `<td class="chg col-7d">${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</td>`
+              : "";
+          const cell30 =
+            show30d
+              ? `<td class="chg col-30d">${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</td>`
+              : "";
           return `<tr class="hover:bg-neutral-900/80">
             <td class="text-neutral-500">${rank}</td>
             <td>
@@ -546,8 +586,8 @@
             <td>${fmtEthCell(t)}</td>
             <td>${fmtTokenCell(t)}</td>
             <td class="chg">${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct, t.symbol)}</td>
-            <td class="chg">${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</td>
-            <td class="chg">${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</td>
+            ${cell7}
+            ${cell30}
             <td>${fmtUsd(t.fdv)}</td>
             <td>${fmtUsd(t.volume_24h)}</td>
             <td>${fmtPrice(t.price)}</td>
@@ -560,6 +600,12 @@
         .map((t, i) => {
           const rank = start + i + 1;
           const trade = t.token ? `https://pools.trade/t/${t.token}` : "#";
+          const row7 = show7d
+            ? `<div class="m-row"><span class="m-label">7d</span><span>${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</span></div>`
+            : "";
+          const row30 = show30d
+            ? `<div class="m-row"><span class="m-label">30d</span><span>${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</span></div>`
+            : "";
           return `<div class="m-card">
             <div class="token-cell" style="margin-bottom:0.6rem">
               <span class="text-neutral-500 text-xs w-6 shrink-0">#${rank}</span>
@@ -576,8 +622,8 @@
             <div class="m-row"><span class="m-label">ETH</span><span>${fmtEthCell(t)}</span></div>
             <div class="m-row"><span class="m-label">Token</span><span>${fmtTokenCell(t)}</span></div>
             <div class="m-row"><span class="m-label">24h</span><span>${fmtSideChg(t.eth_change_24h_pct, t.token_change_24h_pct, t.symbol)}</span></div>
-            <div class="m-row"><span class="m-label">7d</span><span>${fmtSideChg(t.eth_change_7d_pct, t.token_change_7d_pct, t.symbol)}</span></div>
-            <div class="m-row"><span class="m-label">30d</span><span>${fmtSideChg(t.eth_change_30d_pct, t.token_change_30d_pct, t.symbol)}</span></div>
+            ${row7}
+            ${row30}
             <div class="m-row"><span class="m-label">FDV</span><span>${fmtUsd(t.fdv)}</span></div>
             <div class="m-row"><span class="m-label">Vol 24h</span><span>${fmtUsd(t.volume_24h)}</span></div>
             <div class="m-row"><span class="m-label">Price</span><span>${fmtPrice(t.price)}</span></div>
