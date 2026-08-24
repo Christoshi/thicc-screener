@@ -19,6 +19,8 @@
     table.hide-7d { min-width: 900px; }
     table.hide-30d { min-width: 900px; }
     table.hide-7d.hide-30d { min-width: 800px; }
+    table.hide-7d .col-7d,
+    table.hide-30d .col-30d { display: none !important; }
     th, td {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -125,7 +127,6 @@
     }
     .page-btn:hover:not(:disabled) { border-color: #34d399; color: #34d399; }
     .page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-
     .stats {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -144,109 +145,32 @@
       border-radius: 0.65rem;
       padding: 0.65rem 0.75rem;
       box-shadow: 0 1px 0 rgba(52, 211, 153, 0.06) inset, 0 4px 16px rgba(0, 0, 0, 0.35);
-      min-height: 0;
-    }
-    .stat-card:hover {
-      border-color: #3d4a44;
-      box-shadow: 0 1px 0 rgba(52, 211, 153, 0.1) inset, 0 6px 20px rgba(0, 0, 0, 0.4);
     }
     .stat-label {
       font-size: 0.75rem;
       font-weight: 500;
       color: #8a9a92;
       letter-spacing: 0.02em;
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       margin-bottom: 0.35rem;
     }
-    .stat-value,
-    .overview-row .v,
-    .stat-grid .v {
+    .stat-value, .overview-row .v, .stat-grid .v {
       font-size: 0.9rem;
       font-weight: 600;
       color: #eef2f0;
       font-variant-numeric: tabular-nums;
-      line-height: 1.3;
     }
-    .stat-value { margin-top: 0; }
-    .stat-value.accent,
-    .overview-row .v.accent { color: #34d399; }
-    .stat-sub {
-      font-size: 0.75rem;
-      margin-top: 0.2rem;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.25;
-    }
-    .overview-row .k,
-    .stat-grid .k {
-      font-size: 0.75rem;
-      color: #6b7a72;
-      line-height: 1.3;
-    }
+    .stat-value.accent, .overview-row .v.accent { color: #34d399; }
+    .stat-sub { font-size: 0.75rem; margin-top: 0.2rem; }
+    .overview-row .k, .stat-grid .k { font-size: 0.75rem; color: #6b7a72; }
     .stat-grid {
       display: grid;
       grid-template-columns: auto 1fr;
       gap: 0.2rem 0.6rem;
-      margin-top: 0;
       align-items: baseline;
     }
     .stat-grid .v { text-align: right; }
-    .overview-rows {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      margin-top: 0;
-    }
-    .overview-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 0.5rem;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .mobile-list { display: none; }
-    .m-card {
-      border: 1px solid #262626;
-      border-radius: 0.75rem;
-      padding: 0.85rem 1rem;
-      background: #111;
-    }
-    .m-card + .m-card { margin-top: 0.6rem; }
-    .m-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-    }
-    .m-row + .m-row { margin-top: 0.35rem; }
-    .m-label { color: #737373; }
-    .m-trade {
-      display: inline-block;
-      margin-top: 0.65rem;
-      padding: 0.45rem 0.9rem;
-      border-radius: 0.5rem;
-      background: #064e3b;
-      color: #6ee7b7;
-      font-size: 0.8rem;
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    table.hide-7d .col-7d,
-    table.hide-30d .col-30d { display: none !important; }
-
-    @media (max-width: 767px) {
-      .desktop-table { display: none !important; }
-      .mobile-list { display: block; }
-      #search, .search-wrap { max-width: none; }
-      .topnav a { font-size: 0.75rem; padding: 0.35rem 0.5rem; }
-      .token-logo, .token-logo-fallback { width: 32px; height: 32px; }
-      .stat-card { padding: 0.55rem 0.6rem; }
-    }
+    .overview-rows { display: flex; flex-direction: column; gap: 0.35rem; }
+    .overview-row { display: flex; justify-content: space-between; gap: 0.5rem; }
   </style>
 </head>
 <body>
@@ -293,13 +217,11 @@
           </div>
         </div>
       </div>
-
       <div class="stat-card">
         <div class="stat-label">Total ETH in Pools</div>
         <div class="stat-value" id="stat-eth">—</div>
         <div class="stat-sub" id="stat-eth-chg"></div>
       </div>
-
       <div class="stat-card">
         <div class="stat-label">Instant launches</div>
         <div class="stat-grid" id="stat-instant">
@@ -309,7 +231,6 @@
           <span class="k">All</span><span class="v">—</span>
         </div>
       </div>
-
       <div class="stat-card">
         <div class="stat-label">Crowd launches</div>
         <div class="stat-grid" id="stat-crowd">
@@ -321,7 +242,7 @@
       </div>
     </div>
 
-    <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800 -mx-0">
+    <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800">
       <table class="text-sm" id="token-table">
         <colgroup>
           <col style="width:3%" />
@@ -337,4 +258,185 @@
           <col style="width:9%" />
           <col style="width:5%" />
         </colgroup>
-        <thead class="
+        <thead class="bg-neutral-900 text-neutral-400 text-xs uppercase">
+          <tr>
+            <th>#</th>
+            <th>Token</th>
+            <th>LP Value</th>
+            <th>ETH</th>
+            <th>Token</th>
+            <th class="chg">24h</th>
+            <th class="chg col-7d">7d</th>
+            <th class="chg col-30d">30d</th>
+            <th>Fdv</th>
+            <th>Volume</th>
+            <th>Price</th>
+            <th>Trade</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="flex items-center justify-between gap-3 mt-4 flex-wrap">
+      <span id="page-info" class="text-sm text-neutral-400"></span>
+      <div class="flex gap-2">
+        <button class="page-btn" id="prev-btn" disabled>Prev</button>
+        <button class="page-btn" id="next-btn" disabled>Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PER_PAGE = 20;
+    let allTokens = [];
+    let filtered = [];
+    let page = 0;
+    let has7d = false;
+    let has30d = false;
+
+    const $ = (id) => document.getElementById(id);
+
+    function fmtUsd(n) {
+      if (n == null || !Number.isFinite(n)) return '—';
+      if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+      if (Math.abs(n) >= 1e3) return '$' + (n / 1e3).toFixed(1) + 'k';
+      return '$' + n.toFixed(2);
+    }
+    function fmtNum(n, d = 2) {
+      if (n == null || !Number.isFinite(n)) return '—';
+      if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'k';
+      return n.toFixed(d);
+    }
+    function fmtPct(n) {
+      if (n == null || !Number.isFinite(n)) return '<span class="muted">—</span>';
+      const cls = n > 0 ? 'pos' : n < 0 ? 'neg' : 'muted';
+      const sign = n > 0 ? '+' : '';
+      return `<span class="${cls}">${sign}${n.toFixed(2)}%</span>`;
+    }
+    function fmtChg(pctEth, pctTok) {
+      return `<div class="chg-stack">
+        <div>ETH ${fmtPct(pctEth)}</div>
+        <div>Tok ${fmtPct(pctTok)}</div>
+      </div>`;
+    }
+    function fmtAmt(side, usd) {
+      return `<div class="amt-stack">
+        <div>${fmtNum(side, 4)}</div>
+        <div class="amt-usd">${fmtUsd(usd)}</div>
+      </div>`;
+    }
+
+    function renderStats(s) {
+      $('stat-lp').textContent = fmtUsd(s.total_lp_usd);
+      $('stat-vol').textContent = fmtUsd(s.total_volume_24h);
+      $('stat-pools').textContent = s.pools ?? '—';
+      $('stat-eth').textContent = fmtNum(s.total_eth_side, 2) + ' ETH';
+      const chg = s.total_eth_change_24h_pct;
+      $('stat-eth-chg').innerHTML = Number.isFinite(chg)
+        ? `<span class="${chg >= 0 ? 'pos' : 'neg'}">${chg > 0 ? '+' : ''}${chg.toFixed(2)}% 24h</span>`
+        : '';
+      const setGrid = (id, obj) => {
+        const el = $(id);
+        if (!obj) return;
+        el.innerHTML = `
+          <span class="k">24h</span><span class="v">${obj.h24 ?? '—'}</span>
+          <span class="k">7d</span><span class="v">${obj.d7 ?? '—'}</span>
+          <span class="k">30d</span><span class="v">${obj.d30 ?? '—'}</span>
+          <span class="k">All</span><span class="v">${obj.all ?? '—'}</span>`;
+      };
+      setGrid('stat-instant', s.instant_launches);
+      setGrid('stat-crowd', s.crowd_launches);
+    }
+
+    function renderTable() {
+      const start = page * PER_PAGE;
+      const slice = filtered.slice(start, start + PER_PAGE);
+      const tbody = $('tbody');
+      tbody.innerHTML = slice.map((t, i) => {
+        const rank = start + i + 1;
+        const logo = t.image
+          ? `<img class="token-logo" src="${t.image}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+             <div class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || '?')[0]}</div>`
+          : `<div class="token-logo-fallback">${t.emoji || (t.symbol || '?')[0]}</div>`;
+        return `<tr class="border-t border-neutral-800 hover:bg-neutral-900/50">
+          <td class="muted">${rank}</td>
+          <td>
+            <div class="token-cell">
+              ${logo}
+              <div style="min-width:0">
+                <div class="font-medium truncate">${t.symbol || '—'}</div>
+                <div class="text-xs muted truncate">${t.name || ''}</div>
+              </div>
+              <span class="copy-btn" title="Copy CA" data-ca="${t.token}">📋</span>
+            </div>
+          </td>
+          <td>${fmtUsd(t.lp_value)}</td>
+          <td>${fmtAmt(t.eth_side, t.eth_side_usd)}</td>
+          <td>${fmtAmt(t.token_side, t.token_side_usd)}</td>
+          <td class="chg">${fmtChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</td>
+          <td class="chg col-7d">${fmtChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>
+          <td class="chg col-30d">${fmtChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>
+          <td>${fmtUsd(t.fdv)}</td>
+          <td>${fmtUsd(t.volume_24h)}</td>
+          <td>${t.price != null && Number.isFinite(t.price) ? '$' + Number(t.price).toPrecision(4) : '—'}</td>
+          <td><a href="https://pools.trade/t/${t.token}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline text-xs">Trade</a></td>
+        </tr>`;
+      }).join('');
+
+      const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+      $('page-info').textContent = filtered.length
+        ? `Page ${page + 1} of ${totalPages} · ${filtered.length} tokens`
+        : 'No tokens';
+      $('prev-btn').disabled = page <= 0;
+      $('next-btn').disabled = page >= totalPages - 1;
+
+      tbody.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.onclick = () => {
+          navigator.clipboard.writeText(btn.dataset.ca).then(() => {
+            btn.textContent = '✓';
+            setTimeout(() => btn.textContent = '📋', 1200);
+          });
+        };
+      });
+    }
+
+    function applyFilter() {
+      const q = ($('search').value || '').trim().toLowerCase();
+      filtered = !q
+        ? allTokens.slice()
+        : allTokens.filter(t =>
+            (t.symbol || '').toLowerCase().includes(q) ||
+            (t.name || '').toLowerCase().includes(q) ||
+            (t.token || '').toLowerCase().includes(q)
+          );
+      page = 0;
+      renderTable();
+    }
+
+    $('search').addEventListener('input', applyFilter);
+    $('prev-btn').onclick = () => { if (page > 0) { page--; renderTable(); } };
+    $('next-btn').onclick = () => {
+      if ((page + 1) * PER_PAGE < filtered.length) { page++; renderTable(); }
+    };
+
+    fetch('data.json?t=' + Date.now())
+      .then(r => r.json())
+      .then(data => {
+        allTokens = (data.tokens || []).slice().sort((a, b) => (b.lp_value || 0) - (a.lp_value || 0));
+        has7d = allTokens.some(t => Number.isFinite(t.eth_change_7d_pct) || Number.isFinite(t.token_change_7d_pct));
+        has30d = allTokens.some(t => Number.isFinite(t.eth_change_30d_pct) || Number.isFinite(t.token_change_30d_pct));
+        const table = $('token-table');
+        table.classList.toggle('hide-7d', !has7d);
+        table.classList.toggle('hide-30d', !has30d);
+        renderStats(data.stats || {});
+        applyFilter();
+      })
+      .catch(err => {
+        console.error(err);
+        $('tbody').innerHTML = '<tr><td colspan="12" class="text-center py-8 muted">Failed to load data.json</td></tr>';
+      });
+  </script>
+</body>
+</html>
