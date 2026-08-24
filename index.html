@@ -289,6 +289,9 @@
 
   <script>
     const PER_PAGE = 20;
+    const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
+    const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
+
     let allTokens = [];
     let filtered = [];
     let page = 0;
@@ -328,6 +331,15 @@
       </div>`;
     }
 
+    function copyCA(addr, el) {
+      navigator.clipboard.writeText(addr).then(() => {
+        const prev = el.innerHTML;
+        el.innerHTML = CHECK_ICON;
+        setTimeout(() => { el.innerHTML = prev; }, 1200);
+      });
+    }
+    window.copyCA = copyCA;
+
     function renderStats(s) {
       $('stat-lp').textContent = fmtUsd(s.total_lp_usd);
       $('stat-vol').textContent = fmtUsd(s.total_volume_24h);
@@ -360,16 +372,19 @@
           ? `<img class="token-logo" src="${t.image}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
              <div class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || '?')[0]}</div>`
           : `<div class="token-logo-fallback">${t.emoji || (t.symbol || '?')[0]}</div>`;
+        const ca = (t.token || '').replace(/'/g, "\\'");
         return `<tr class="border-t border-neutral-800 hover:bg-neutral-900/50">
           <td class="muted">${rank}</td>
           <td>
             <div class="token-cell">
               ${logo}
               <div style="min-width:0">
-                <div class="font-medium truncate">${t.symbol || '—'}</div>
+                <div class="font-medium truncate inline-flex items-center max-w-full">
+                  <span class="truncate">${t.symbol || '—'}</span>
+                  <span onclick="copyCA('${ca}', this)" title="Copy CA">${COPY_ICON}</span>
+                </div>
                 <div class="text-xs muted truncate">${t.name || ''}</div>
               </div>
-              <span class="copy-btn" title="Copy CA" data-ca="${t.token}">📋</span>
             </div>
           </td>
           <td>${fmtUsd(t.lp_value)}</td>
@@ -391,15 +406,6 @@
         : 'No tokens';
       $('prev-btn').disabled = page <= 0;
       $('next-btn').disabled = page >= totalPages - 1;
-
-      tbody.querySelectorAll('.copy-btn').forEach(btn => {
-        btn.onclick = () => {
-          navigator.clipboard.writeText(btn.dataset.ca).then(() => {
-            btn.textContent = '✓';
-            setTimeout(() => btn.textContent = '📋', 1200);
-          });
-        };
-      });
     }
 
     function applyFilter() {
