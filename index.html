@@ -36,10 +36,7 @@
       white-space: nowrap;
       min-width: 3.5rem;
     }
-    th.sortable {
-      cursor: pointer;
-      user-select: none;
-    }
+    th.sortable { cursor: pointer; user-select: none; }
     th.sortable:hover { color: #e5e5e5; }
     th.sortable .sort-ind {
       display: inline-block;
@@ -48,6 +45,9 @@
       color: #34d399;
       vertical-align: middle;
     }
+    th.draggable { cursor: grab; }
+    th.draggable:active { cursor: grabbing; }
+    th.drag-over { outline: 1px dashed #34d399; outline-offset: -2px; }
     .chg-stack, .amt-stack {
       display: flex;
       flex-direction: column;
@@ -215,11 +215,14 @@
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
         by LP value
       </p>
-      <div class="search-wrap">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
-        </svg>
-        <input id="search" type="search" placeholder="Search token / CA" autocomplete="off" />
+      <div class="flex items-center gap-2 flex-wrap">
+        <button type="button" class="page-btn" id="reset-cols" title="Reset column order">Reset columns</button>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+          </svg>
+          <input id="search" type="search" placeholder="Search token / CA" autocomplete="off" />
+        </div>
       </div>
     </div>
 
@@ -268,37 +271,9 @@
 
     <div class="desktop-table">
       <table class="text-sm" id="token-table">
-        <colgroup>
-          <col style="width:3%" />
-          <col style="width:14%" />
-          <col style="width:9%" />
-          <col style="width:8%" />
-          <col style="width:9%" />
-          <col style="width:9%" />
-          <col class="col-7d" style="width:9%" />
-          <col class="col-30d" style="width:9%" />
-          <col style="width:8%" />
-          <col style="width:7%" />
-          <col style="width:8%" />
-          <col style="width:8%" />
-          <col style="width:5%; min-width:3.5rem" />
-        </colgroup>
+        <colgroup id="colgroup"></colgroup>
         <thead class="bg-neutral-900 text-neutral-400 text-xs uppercase">
-          <tr>
-            <th>#</th>
-            <th class="sortable" data-sort="symbol">Token</th>
-            <th class="sortable" data-sort="lp_value">LP Value</th>
-            <th class="sortable" data-sort="eth_side">ETH</th>
-            <th class="sortable" data-sort="token_side">Token</th>
-            <th class="chg sortable" data-sort="chg_24h">24h</th>
-            <th class="chg col-7d sortable" data-sort="chg_7d">7d</th>
-            <th class="chg col-30d sortable" data-sort="chg_30d">30d</th>
-            <th class="sortable" data-sort="fdv">Fdv</th>
-            <th class="sortable" data-sort="fdv_lp">FDV/LP</th>
-            <th class="sortable" data-sort="volume_24h">Volume</th>
-            <th class="sortable" data-sort="price">Price</th>
-            <th class="col-trade">Trade</th>
-          </tr>
+          <tr id="thead-row"></tr>
         </thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -315,8 +290,27 @@
 
   <script>
     const PER_PAGE = 20;
+    const COL_ORDER_KEY = 'thicc-col-order';
     const COPY_ICON = `<svg class="copy-btn inline w-3.5 h-3.5 ml-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
     const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
+
+    const COL_DEFS = {
+      rank:   { id: 'rank',   label: '#',       width: '3%',  fixed: true,  sortable: false, hideClass: null },
+      symbol: { id: 'symbol', label: 'Token',   width: '14%', fixed: false, sortable: true,  sortKey: 'symbol', hideClass: null },
+      lp:     { id: 'lp',     label: 'LP Value',width: '9%',  fixed: false, sortable: true,  sortKey: 'lp_value', hideClass: null },
+      eth:    { id: 'eth',    label: 'ETH',     width: '8%',  fixed: false, sortable: true,  sortKey: 'eth_side', hideClass: null },
+      tok:    { id: 'tok',    label: 'Token',   width: '9%',  fixed: false, sortable: true,  sortKey: 'token_side', hideClass: null },
+      chg24:  { id: 'chg24',  label: '24h',     width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_24h', hideClass: null, chg: true },
+      chg7:   { id: 'chg7',   label: '7d',      width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_7d', hideClass: 'col-7d', chg: true },
+      chg30:  { id: 'chg30',  label: '30d',     width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_30d', hideClass: 'col-30d', chg: true },
+      fdv:    { id: 'fdv',    label: 'Fdv',     width: '8%',  fixed: false, sortable: true,  sortKey: 'fdv', hideClass: null },
+      fdvlp:  { id: 'fdvlp',  label: 'FDV/LP',  width: '7%',  fixed: false, sortable: true,  sortKey: 'fdv_lp', hideClass: null },
+      vol:    { id: 'vol',    label: 'Volume',  width: '8%',  fixed: false, sortable: true,  sortKey: 'volume_24h', hideClass: null },
+      price:  { id: 'price',  label: 'Price',   width: '8%',  fixed: false, sortable: true,  sortKey: 'price', hideClass: null },
+      trade:  { id: 'trade',  label: 'Trade',   width: '5%',  fixed: true,  sortable: false, hideClass: null, trade: true }
+    };
+
+    const DEFAULT_ORDER = ['rank','symbol','lp','eth','tok','chg24','chg7','chg30','fdv','fdvlp','vol','price','trade'];
 
     let allTokens = [];
     let filtered = [];
@@ -325,8 +319,38 @@
     let has30d = false;
     let sortKey = 'lp_value';
     let sortDir = 'desc';
+    let colOrder = loadColOrder();
+    let dragSrcId = null;
 
     const $ = (id) => document.getElementById(id);
+
+    function loadColOrder() {
+      try {
+        const raw = localStorage.getItem(COL_ORDER_KEY);
+        if (!raw) return DEFAULT_ORDER.slice();
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return DEFAULT_ORDER.slice();
+        const known = new Set(DEFAULT_ORDER);
+        const cleaned = arr.filter(id => known.has(id));
+        DEFAULT_ORDER.forEach(id => { if (!cleaned.includes(id)) cleaned.push(id); });
+        // enforce fixed ends
+        const mid = cleaned.filter(id => id !== 'rank' && id !== 'trade');
+        return ['rank', ...mid, 'trade'];
+      } catch {
+        return DEFAULT_ORDER.slice();
+      }
+    }
+
+    function saveColOrder() {
+      try { localStorage.setItem(COL_ORDER_KEY, JSON.stringify(colOrder)); } catch (_) {}
+    }
+
+    function resetColOrder() {
+      colOrder = DEFAULT_ORDER.slice();
+      try { localStorage.removeItem(COL_ORDER_KEY); } catch (_) {}
+      buildHeader();
+      renderTable();
+    }
 
     function fmtUsd(n) {
       if (n == null || !Number.isFinite(n)) return '—';
@@ -347,16 +371,10 @@
       return `<span class="${cls}">${sign}${n.toFixed(2)}%</span>`;
     }
     function fmtChg(pctEth, pctTok) {
-      return `<div class="chg-stack">
-        <div>ETH ${fmtPct(pctEth)}</div>
-        <div>Tok ${fmtPct(pctTok)}</div>
-      </div>`;
+      return `<div class="chg-stack"><div>ETH ${fmtPct(pctEth)}</div><div>Tok ${fmtPct(pctTok)}</div></div>`;
     }
     function fmtAmt(side, usd) {
-      return `<div class="amt-stack">
-        <div>${fmtNum(side, 4)}</div>
-        <div class="amt-usd">${fmtUsd(usd)}</div>
-      </div>`;
+      return `<div class="amt-stack"><div>${fmtNum(side, 4)}</div><div class="amt-usd">${fmtUsd(usd)}</div></div>`;
     }
     function fdvLpRatio(t) {
       const fdv = t.fdv, lp = t.lp_value;
@@ -422,19 +440,117 @@
     }
 
     function sortTokens(list) {
-      const key = sortKey;
-      const dir = sortDir;
       return list.slice().sort((a, b) => {
-        const va = getSortValue(a, key);
-        const vb = getSortValue(b, key);
-        let c = cmpNullLast(va, vb, dir);
+        let c = cmpNullLast(getSortValue(a, sortKey), getSortValue(b, sortKey), sortDir);
         if (c !== 0) return c;
-        const ta = getSortTie(a, key);
-        const tb = getSortTie(b, key);
-        c = cmpNullLast(ta, tb, dir);
+        c = cmpNullLast(getSortTie(a, sortKey), getSortTie(b, sortKey), sortDir);
         if (c !== 0) return c;
         return (b.lp_value || 0) - (a.lp_value || 0);
       });
+    }
+
+    function cellHtml(colId, t, rank) {
+      switch (colId) {
+        case 'rank': return `<td class="muted">${rank}</td>`;
+        case 'symbol': {
+          const logo = t.image
+            ? `<img class="token-logo" src="${t.image}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><div class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || '?')[0]}</div>`
+            : `<div class="token-logo-fallback">${t.emoji || (t.symbol || '?')[0]}</div>`;
+          const ca = (t.token || '').replace(/'/g, "\\'");
+          return `<td><div class="token-cell">${logo}<div style="min-width:0"><div class="font-medium truncate inline-flex items-center max-w-full"><span class="truncate">${t.symbol || '—'}</span><span onclick="copyCA('${ca}', this)" title="Copy CA">${COPY_ICON}</span></div><div class="text-xs muted truncate">${t.name || ''}</div></div></div></td>`;
+        }
+        case 'lp': return `<td>${fmtUsd(t.lp_value)}</td>`;
+        case 'eth': return `<td>${fmtAmt(t.eth_side, t.eth_side_usd)}</td>`;
+        case 'tok': return `<td>${fmtAmt(t.token_side, t.token_side_usd)}</td>`;
+        case 'chg24': return `<td class="chg">${fmtChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</td>`;
+        case 'chg7': return `<td class="chg col-7d">${fmtChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>`;
+        case 'chg30': return `<td class="chg col-30d">${fmtChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>`;
+        case 'fdv': return `<td>${fmtUsd(t.fdv)}</td>`;
+        case 'fdvlp': return `<td>${fmtFdvLp(t)}</td>`;
+        case 'vol': return `<td>${fmtUsd(t.volume_24h)}</td>`;
+        case 'price': return `<td>${t.price != null && Number.isFinite(t.price) ? '$' + Number(t.price).toPrecision(4) : '—'}</td>`;
+        case 'trade': return `<td class="col-trade"><a href="https://pools.trade/t/${t.token}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline text-xs">Trade</a></td>`;
+        default: return `<td>—</td>`;
+      }
+    }
+
+    function buildHeader() {
+      const cg = $('colgroup');
+      const tr = $('thead-row');
+      cg.innerHTML = '';
+      tr.innerHTML = '';
+      colOrder.forEach(id => {
+        const def = COL_DEFS[id];
+        if (!def) return;
+        const col = document.createElement('col');
+        col.style.width = def.width;
+        if (def.hideClass) col.className = def.hideClass;
+        if (def.trade) col.style.minWidth = '3.5rem';
+        cg.appendChild(col);
+
+        const th = document.createElement('th');
+        th.textContent = def.label;
+        th.dataset.colId = id;
+        if (def.chg) th.classList.add('chg');
+        if (def.hideClass) th.classList.add(def.hideClass);
+        if (def.trade) th.classList.add('col-trade');
+        if (def.sortable) {
+          th.classList.add('sortable');
+          th.dataset.sort = def.sortKey;
+          th.addEventListener('click', (e) => {
+            if (e.target.closest('[draggable]')) return;
+            onSortClick(def.sortKey);
+          });
+        }
+        if (!def.fixed) {
+          th.classList.add('draggable');
+          th.draggable = true;
+          th.addEventListener('dragstart', onDragStart);
+          th.addEventListener('dragover', onDragOver);
+          th.addEventListener('dragleave', onDragLeave);
+          th.addEventListener('drop', onDrop);
+          th.addEventListener('dragend', onDragEnd);
+        }
+        tr.appendChild(th);
+      });
+      updateSortHeaders();
+    }
+
+    function onDragStart(e) {
+      dragSrcId = e.currentTarget.dataset.colId;
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', dragSrcId); } catch (_) {}
+    }
+    function onDragOver(e) {
+      e.preventDefault();
+      const th = e.currentTarget;
+      if (th.dataset.colId === 'rank' || th.dataset.colId === 'trade') return;
+      th.classList.add('drag-over');
+    }
+    function onDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+    function onDrop(e) {
+      e.preventDefault();
+      const target = e.currentTarget;
+      target.classList.remove('drag-over');
+      const toId = target.dataset.colId;
+      if (!dragSrcId || dragSrcId === toId || toId === 'rank' || toId === 'trade') return;
+      const from = colOrder.indexOf(dragSrcId);
+      const to = colOrder.indexOf(toId);
+      if (from < 0 || to < 0) return;
+      colOrder.splice(from, 1);
+      colOrder.splice(to, 0, dragSrcId);
+      // keep rank first, trade last
+      colOrder = colOrder.filter(id => id !== 'rank' && id !== 'trade');
+      colOrder = ['rank', ...colOrder, 'trade'];
+      saveColOrder();
+      buildHeader();
+      renderTable();
+    }
+    function onDragEnd() {
+      dragSrcId = null;
+      document.querySelectorAll('th.drag-over').forEach(el => el.classList.remove('drag-over'));
     }
 
     function updateSortHeaders() {
@@ -453,10 +569,7 @@
     function onSortClick(key) {
       if (sortKey === key) {
         if (sortDir === 'desc') sortDir = 'asc';
-        else {
-          sortKey = 'lp_value';
-          sortDir = 'desc';
-        }
+        else { sortKey = 'lp_value'; sortDir = 'desc'; }
       } else {
         sortKey = key;
         sortDir = 'desc';
@@ -493,37 +606,7 @@
       const tbody = $('tbody');
       tbody.innerHTML = slice.map((t, i) => {
         const rank = start + i + 1;
-        const logo = t.image
-          ? `<img class="token-logo" src="${t.image}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-             <div class="token-logo-fallback" style="display:none">${t.emoji || (t.symbol || '?')[0]}</div>`
-          : `<div class="token-logo-fallback">${t.emoji || (t.symbol || '?')[0]}</div>`;
-        const ca = (t.token || '').replace(/'/g, "\\'");
-        return `<tr class="border-t border-neutral-800 hover:bg-neutral-900/50">
-          <td class="muted">${rank}</td>
-          <td>
-            <div class="token-cell">
-              ${logo}
-              <div style="min-width:0">
-                <div class="font-medium truncate inline-flex items-center max-w-full">
-                  <span class="truncate">${t.symbol || '—'}</span>
-                  <span onclick="copyCA('${ca}', this)" title="Copy CA">${COPY_ICON}</span>
-                </div>
-                <div class="text-xs muted truncate">${t.name || ''}</div>
-              </div>
-            </div>
-          </td>
-          <td>${fmtUsd(t.lp_value)}</td>
-          <td>${fmtAmt(t.eth_side, t.eth_side_usd)}</td>
-          <td>${fmtAmt(t.token_side, t.token_side_usd)}</td>
-          <td class="chg">${fmtChg(t.eth_change_24h_pct, t.token_change_24h_pct)}</td>
-          <td class="chg col-7d">${fmtChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>
-          <td class="chg col-30d">${fmtChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>
-          <td>${fmtUsd(t.fdv)}</td>
-          <td>${fmtFdvLp(t)}</td>
-          <td>${fmtUsd(t.volume_24h)}</td>
-          <td>${t.price != null && Number.isFinite(t.price) ? '$' + Number(t.price).toPrecision(4) : '—'}</td>
-          <td class="col-trade"><a href="https://pools.trade/t/${t.token}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline text-xs">Trade</a></td>
-        </tr>`;
+        return `<tr class="border-t border-neutral-800 hover:bg-neutral-900/50">${colOrder.map(id => cellHtml(id, t, rank)).join('')}</tr>`;
       }).join('');
 
       const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
@@ -549,14 +632,14 @@
       renderTable();
     }
 
-    document.querySelectorAll('th.sortable').forEach(th => {
-      th.addEventListener('click', () => onSortClick(th.dataset.sort));
-    });
+    $('reset-cols').onclick = resetColOrder;
     $('search').addEventListener('input', () => applyFilter(true));
     $('prev-btn').onclick = () => { if (page > 0) { page--; renderTable(); } };
     $('next-btn').onclick = () => {
       if ((page + 1) * PER_PAGE < filtered.length) { page++; renderTable(); }
     };
+
+    buildHeader();
 
     fetch('data.json?t=' + Date.now())
       .then(r => r.json())
