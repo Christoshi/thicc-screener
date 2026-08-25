@@ -13,12 +13,12 @@
     table {
       table-layout: fixed;
       width: 100%;
-      min-width: 1000px;
+      min-width: 1120px;
       font-variant-numeric: tabular-nums;
     }
-    table.hide-7d { min-width: 900px; }
-    table.hide-30d { min-width: 900px; }
-    table.hide-7d.hide-30d { min-width: 800px; }
+    table.hide-7d { min-width: 1020px; }
+    table.hide-30d { min-width: 1020px; }
+    table.hide-7d.hide-30d { min-width: 920px; }
     table.hide-7d .col-7d,
     table.hide-30d .col-30d { display: none !important; }
     th, td {
@@ -30,6 +30,24 @@
       text-align: left;
     }
     td.chg, th.chg { white-space: normal; }
+    th.col-trade, td.col-trade {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: nowrap;
+      min-width: 3.5rem;
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+    th.sortable:hover { color: #e5e5e5; }
+    th.sortable .sort-ind {
+      display: inline-block;
+      margin-left: 0.2rem;
+      font-size: 0.65rem;
+      color: #34d399;
+      vertical-align: middle;
+    }
     .chg-stack, .amt-stack {
       display: flex;
       flex-direction: column;
@@ -171,6 +189,12 @@
     .stat-grid .v { text-align: right; }
     .overview-rows { display: flex; flex-direction: column; gap: 0.35rem; }
     .overview-row { display: flex; justify-content: space-between; gap: 0.5rem; }
+    .desktop-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 0.5rem;
+      border: 1px solid #262626;
+    }
   </style>
 </head>
 <body>
@@ -242,36 +266,38 @@
       </div>
     </div>
 
-    <div class="desktop-table overflow-x-auto rounded-lg border border-neutral-800">
+    <div class="desktop-table">
       <table class="text-sm" id="token-table">
         <colgroup>
           <col style="width:3%" />
-          <col style="width:15%" />
-          <col style="width:10%" />
+          <col style="width:14%" />
           <col style="width:9%" />
-          <col style="width:10%" />
-          <col style="width:10%" />
-          <col class="col-7d" style="width:10%" />
-          <col class="col-30d" style="width:10%" />
+          <col style="width:8%" />
           <col style="width:9%" />
           <col style="width:9%" />
-          <col style="width:9%" />
-          <col style="width:5%" />
+          <col class="col-7d" style="width:9%" />
+          <col class="col-30d" style="width:9%" />
+          <col style="width:8%" />
+          <col style="width:7%" />
+          <col style="width:8%" />
+          <col style="width:8%" />
+          <col style="width:5%; min-width:3.5rem" />
         </colgroup>
         <thead class="bg-neutral-900 text-neutral-400 text-xs uppercase">
           <tr>
             <th>#</th>
-            <th>Token</th>
-            <th>LP Value</th>
-            <th>ETH</th>
-            <th>Token</th>
-            <th class="chg">24h</th>
-            <th class="chg col-7d">7d</th>
-            <th class="chg col-30d">30d</th>
-            <th>Fdv</th>
-            <th>Volume</th>
-            <th>Price</th>
-            <th>Trade</th>
+            <th class="sortable" data-sort="symbol">Token</th>
+            <th class="sortable" data-sort="lp_value">LP Value</th>
+            <th class="sortable" data-sort="eth_side">ETH</th>
+            <th class="sortable" data-sort="token_side">Token</th>
+            <th class="chg sortable" data-sort="chg_24h">24h</th>
+            <th class="chg col-7d sortable" data-sort="chg_7d">7d</th>
+            <th class="chg col-30d sortable" data-sort="chg_30d">30d</th>
+            <th class="sortable" data-sort="fdv">Fdv</th>
+            <th class="sortable" data-sort="fdv_lp">FDV/LP</th>
+            <th class="sortable" data-sort="volume_24h">Volume</th>
+            <th class="sortable" data-sort="price">Price</th>
+            <th class="col-trade">Trade</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -297,6 +323,8 @@
     let page = 0;
     let has7d = false;
     let has30d = false;
+    let sortKey = 'lp_value';
+    let sortDir = 'desc';
 
     const $ = (id) => document.getElementById(id);
 
@@ -330,6 +358,18 @@
         <div class="amt-usd">${fmtUsd(usd)}</div>
       </div>`;
     }
+    function fdvLpRatio(t) {
+      const fdv = t.fdv, lp = t.lp_value;
+      if (fdv == null || lp == null || !Number.isFinite(fdv) || !Number.isFinite(lp) || lp <= 0) return null;
+      return fdv / lp;
+    }
+    function fmtFdvLp(t) {
+      const r = fdvLpRatio(t);
+      if (r == null) return '—';
+      if (r >= 100) return r.toFixed(0) + 'x';
+      if (r >= 10) return r.toFixed(1) + 'x';
+      return r.toFixed(2) + 'x';
+    }
 
     function copyCA(addr, el) {
       navigator.clipboard.writeText(addr).then(() => {
@@ -339,6 +379,91 @@
       });
     }
     window.copyCA = copyCA;
+
+    function numOrNull(v) {
+      return v != null && Number.isFinite(Number(v)) ? Number(v) : null;
+    }
+
+    function getSortValue(t, key) {
+      switch (key) {
+        case 'symbol': return (t.symbol || '').toLowerCase();
+        case 'lp_value': return numOrNull(t.lp_value);
+        case 'eth_side': return numOrNull(t.eth_side);
+        case 'token_side': return numOrNull(t.token_side);
+        case 'fdv': return numOrNull(t.fdv);
+        case 'fdv_lp': return fdvLpRatio(t);
+        case 'volume_24h': return numOrNull(t.volume_24h);
+        case 'price': return numOrNull(t.price);
+        case 'chg_24h': return numOrNull(t.eth_change_24h_pct);
+        case 'chg_7d': return numOrNull(t.eth_change_7d_pct);
+        case 'chg_30d': return numOrNull(t.eth_change_30d_pct);
+        default: return null;
+      }
+    }
+    function getSortTie(t, key) {
+      if (key === 'chg_24h') return numOrNull(t.token_change_24h_pct);
+      if (key === 'chg_7d') return numOrNull(t.token_change_7d_pct);
+      if (key === 'chg_30d') return numOrNull(t.token_change_30d_pct);
+      return null;
+    }
+
+    function cmpNullLast(a, b, dir) {
+      const aN = a == null || (typeof a === 'number' && !Number.isFinite(a));
+      const bN = b == null || (typeof b === 'number' && !Number.isFinite(b));
+      if (aN && bN) return 0;
+      if (aN) return 1;
+      if (bN) return -1;
+      if (typeof a === 'string' && typeof b === 'string') {
+        const c = a.localeCompare(b);
+        return dir === 'asc' ? c : -c;
+      }
+      const d = a - b;
+      return dir === 'asc' ? d : -d;
+    }
+
+    function sortTokens(list) {
+      const key = sortKey;
+      const dir = sortDir;
+      return list.slice().sort((a, b) => {
+        const va = getSortValue(a, key);
+        const vb = getSortValue(b, key);
+        let c = cmpNullLast(va, vb, dir);
+        if (c !== 0) return c;
+        const ta = getSortTie(a, key);
+        const tb = getSortTie(b, key);
+        c = cmpNullLast(ta, tb, dir);
+        if (c !== 0) return c;
+        return (b.lp_value || 0) - (a.lp_value || 0);
+      });
+    }
+
+    function updateSortHeaders() {
+      document.querySelectorAll('th.sortable').forEach(th => {
+        const ind = th.querySelector('.sort-ind');
+        if (ind) ind.remove();
+        if (th.dataset.sort === sortKey) {
+          const span = document.createElement('span');
+          span.className = 'sort-ind';
+          span.textContent = sortDir === 'desc' ? '▼' : '▲';
+          th.appendChild(span);
+        }
+      });
+    }
+
+    function onSortClick(key) {
+      if (sortKey === key) {
+        if (sortDir === 'desc') sortDir = 'asc';
+        else {
+          sortKey = 'lp_value';
+          sortDir = 'desc';
+        }
+      } else {
+        sortKey = key;
+        sortDir = 'desc';
+      }
+      page = 0;
+      applyFilter(false);
+    }
 
     function renderStats(s) {
       $('stat-lp').textContent = fmtUsd(s.total_lp_usd);
@@ -394,9 +519,10 @@
           <td class="chg col-7d">${fmtChg(t.eth_change_7d_pct, t.token_change_7d_pct)}</td>
           <td class="chg col-30d">${fmtChg(t.eth_change_30d_pct, t.token_change_30d_pct)}</td>
           <td>${fmtUsd(t.fdv)}</td>
+          <td>${fmtFdvLp(t)}</td>
           <td>${fmtUsd(t.volume_24h)}</td>
           <td>${t.price != null && Number.isFinite(t.price) ? '$' + Number(t.price).toPrecision(4) : '—'}</td>
-          <td><a href="https://pools.trade/t/${t.token}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline text-xs">Trade</a></td>
+          <td class="col-trade"><a href="https://pools.trade/t/${t.token}" target="_blank" rel="noopener" class="text-emerald-400 hover:underline text-xs">Trade</a></td>
         </tr>`;
       }).join('');
 
@@ -406,22 +532,27 @@
         : 'No tokens';
       $('prev-btn').disabled = page <= 0;
       $('next-btn').disabled = page >= totalPages - 1;
+      updateSortHeaders();
     }
 
-    function applyFilter() {
+    function applyFilter(resetPage = true) {
       const q = ($('search').value || '').trim().toLowerCase();
-      filtered = !q
+      let list = !q
         ? allTokens.slice()
         : allTokens.filter(t =>
             (t.symbol || '').toLowerCase().includes(q) ||
             (t.name || '').toLowerCase().includes(q) ||
             (t.token || '').toLowerCase().includes(q)
           );
-      page = 0;
+      filtered = sortTokens(list);
+      if (resetPage) page = 0;
       renderTable();
     }
 
-    $('search').addEventListener('input', applyFilter);
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => onSortClick(th.dataset.sort));
+    });
+    $('search').addEventListener('input', () => applyFilter(true));
     $('prev-btn').onclick = () => { if (page > 0) { page--; renderTable(); } };
     $('next-btn').onclick = () => {
       if ((page + 1) * PER_PAGE < filtered.length) { page++; renderTable(); }
@@ -430,18 +561,18 @@
     fetch('data.json?t=' + Date.now())
       .then(r => r.json())
       .then(data => {
-        allTokens = (data.tokens || []).slice().sort((a, b) => (b.lp_value || 0) - (a.lp_value || 0));
+        allTokens = (data.tokens || []).slice();
         has7d = allTokens.some(t => Number.isFinite(t.eth_change_7d_pct) || Number.isFinite(t.token_change_7d_pct));
         has30d = allTokens.some(t => Number.isFinite(t.eth_change_30d_pct) || Number.isFinite(t.token_change_30d_pct));
         const table = $('token-table');
         table.classList.toggle('hide-7d', !has7d);
         table.classList.toggle('hide-30d', !has30d);
         renderStats(data.stats || {});
-        applyFilter();
+        applyFilter(true);
       })
       .catch(err => {
         console.error(err);
-        $('tbody').innerHTML = '<tr><td colspan="12" class="text-center py-8 muted">Failed to load data.json</td></tr>';
+        $('tbody').innerHTML = '<tr><td colspan="13" class="text-center py-8 muted">Failed to load data.json</td></tr>';
       });
   </script>
 </body>
