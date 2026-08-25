@@ -1,6 +1,6 @@
 {
   "backfillDone": true,
-  "lastScannedBlock": 45418952,
+  "lastScannedBlock": 45448078,
   "startBlock": 28519960,
   "tokens": {
     "0x87f1ed895b460c002e82075f1038e7f2ce4d51cd": {
@@ -279517,6 +279517,84 @@
       "token": "0x8fd790869afb752607a64cbcda1b3cb9ef8add5d",
       "poolId": "0x4856c035dbebbab3c4dfe343fd06cc48f059b1cca6c2778b6ed9f64ae488d872",
       "blockNumber": 45413825,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xa0aad015378b17fcc92b30471b94e4f43fb7f3e9": {
+      "token": "0xa0aad015378b17fcc92b30471b94e4f43fb7f3e9",
+      "poolId": "0xb09adbdf54a4ecd2ff69a0ee85ef604e13de56872fe15f77f6079530444c4159",
+      "blockNumber": 45420073,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x1ccc94207423b1564fb5c0bac73ae061fd4487db": {
+      "token": "0x1ccc94207423b1564fb5c0bac73ae061fd4487db",
+      "poolId": "0x1dde83b18e1546d292d3a0554a3ab25ac20e4f319a09d607a9e7e260e6a259ed",
+      "blockNumber": 45422983,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x998c978543b0ccf315270dd38cff8058e9683397": {
+      "token": "0x998c978543b0ccf315270dd38cff8058e9683397",
+      "poolId": "0x96033da2bf9d69a548377e6a97a9789c2899a9e0ce1d1ddc2bc21c77fa0aa815",
+      "blockNumber": 45423728,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x5ee4d6ef3231fbf349368bd6799c3d4f476fce99": {
+      "token": "0x5ee4d6ef3231fbf349368bd6799c3d4f476fce99",
+      "poolId": "0x0855d546bc215f75bc2d9b7d644768b1d725986657b4c9dcccb34e33d7541c33",
+      "blockNumber": 45426462,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x658e0a01baa8707bb4221972a3b70b14bcf9a587": {
+      "token": "0x658e0a01baa8707bb4221972a3b70b14bcf9a587",
+      "poolId": "0x0ee2b5fb100b6ac457d708603b0614b6991e8e83b7c3595c92428d0e1b66be74",
+      "blockNumber": 45427526,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xdd76862a7f0b0e50d5593affc3fd464e3a86961e": {
+      "token": "0xdd76862a7f0b0e50d5593affc3fd464e3a86961e",
+      "poolId": "0x3d2c99e3f3c873a0d590f383d1e56c3b36c3bc5a69bc5ee9066a72eff6ea81c6",
+      "blockNumber": 45428334,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x1531957610eec647b44d79aae0bce5bd8523f1fd": {
+      "token": "0x1531957610eec647b44d79aae0bce5bd8523f1fd",
+      "poolId": "0x1c9d6b006e28b6693390de83a664cf681aa9a708cb50b0813815e7c337ed72f1",
+      "blockNumber": 45432265,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xef1b254cbaf8d0756ac60c8c8f296fb1e15a91cd": {
+      "token": "0xef1b254cbaf8d0756ac60c8c8f296fb1e15a91cd",
+      "poolId": "0x722e26a31329d6e32697ef1e2f5c2d43267e8720fc359d671300138790fc0b06",
+      "blockNumber": 45432580,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xe99b043adab133fd2744a4b9cbc7805b2c011ffc": {
+      "token": "0xe99b043adab133fd2744a4b9cbc7805b2c011ffc",
+      "poolId": "0x36506115e961add4e5589f1a5c6cff2cfd804915aa726ee41d88a83d07799b1c",
+      "blockNumber": 45432698,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xd78fd578eaf345028b32b0d2dcc8dc2fb7dc96d4": {
+      "token": "0xd78fd578eaf345028b32b0d2dcc8dc2fb7dc96d4",
+      "poolId": "0xa763d50f14b4442c8c81e9dda4874b2e253c20372b985db9004abcd1c348d5b8",
+      "blockNumber": 45434872,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0xf6130f3c45d7ecd767041c7c202df94ae1a403c7": {
+      "token": "0xf6130f3c45d7ecd767041c7c202df94ae1a403c7",
+      "poolId": "0xee1cfb0c463607b61ec5e3342b255b8baf849e44da63f7df5b384faa8174a1dd",
+      "blockNumber": 45435130,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x64694dc0022c7c0e4a571b3a27396e482755544c": {
+      "token": "0x64694dc0022c7c0e4a571b3a27396e482755544c",
+      "poolId": "0xc177489b09b2daa3c33c12974c136280968a1cc262e31ad39d23053b646f3899",
+      "blockNumber": 45437509,
+      "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
+    },
+    "0x83f445a6cadb35885a34b07d46fe17792b92c372": {
+      "token": "0x83f445a6cadb35885a34b07d46fe17792b92c372",
+      "poolId": "0xe039a0a07f8fc5236436b037dd6bc8112d7ff4562aab1d27728595bd5010be7f",
+      "blockNumber": 45442227,
       "launchpad": "0x23f8209572b4a1c2ad88a42749e830791fb027f1"
     }
   }
