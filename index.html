@@ -195,6 +195,25 @@
       border-radius: 0.5rem;
       border: 1px solid #262626;
     }
+    .reset-cols-wrap {
+      display: flex;
+      justify-content: flex-start;
+      margin: 0 0 0.35rem;
+      min-height: 1.1rem;
+    }
+    .reset-cols-btn {
+      display: none;
+      background: transparent;
+      border: none;
+      color: #525252;
+      font-size: 0.65rem;
+      padding: 0.1rem 0.25rem;
+      cursor: pointer;
+      line-height: 1.2;
+      letter-spacing: 0.01em;
+    }
+    .reset-cols-btn:hover { color: #a3a3a3; }
+    .reset-cols-btn.visible { display: inline; }
   </style>
 </head>
 <body>
@@ -215,14 +234,11 @@
         <a href="https://pools.trade/" target="_blank" rel="noopener" class="text-emerald-400 hover:underline">Pools</a>
         by LP value
       </p>
-      <div class="flex items-center gap-2 flex-wrap">
-        <button type="button" class="page-btn" id="reset-cols" title="Reset column order">Reset columns</button>
-        <div class="search-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
-          </svg>
-          <input id="search" type="search" placeholder="Search token / CA" autocomplete="off" />
-        </div>
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>
+        </svg>
+        <input id="search" type="search" placeholder="Search token / CA" autocomplete="off" />
       </div>
     </div>
 
@@ -269,6 +285,10 @@
       </div>
     </div>
 
+    <div class="reset-cols-wrap">
+      <button type="button" class="reset-cols-btn" id="reset-cols" title="Reset column order">Reset columns</button>
+    </div>
+
     <div class="desktop-table">
       <table class="text-sm" id="token-table">
         <colgroup id="colgroup"></colgroup>
@@ -295,19 +315,19 @@
     const CHECK_ICON = `<svg class="inline w-3.5 h-3.5 ml-1 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg>`;
 
     const COL_DEFS = {
-      rank:   { id: 'rank',   label: '#',       width: '3%',  fixed: true,  sortable: false, hideClass: null },
-      symbol: { id: 'symbol', label: 'Token',   width: '14%', fixed: false, sortable: true,  sortKey: 'symbol', hideClass: null },
-      lp:     { id: 'lp',     label: 'LP Value',width: '9%',  fixed: false, sortable: true,  sortKey: 'lp_value', hideClass: null },
-      eth:    { id: 'eth',    label: 'ETH',     width: '8%',  fixed: false, sortable: true,  sortKey: 'eth_side', hideClass: null },
-      tok:    { id: 'tok',    label: 'Token',   width: '9%',  fixed: false, sortable: true,  sortKey: 'token_side', hideClass: null },
-      chg24:  { id: 'chg24',  label: '24h',     width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_24h', hideClass: null, chg: true },
-      chg7:   { id: 'chg7',   label: '7d',      width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_7d', hideClass: 'col-7d', chg: true },
-      chg30:  { id: 'chg30',  label: '30d',     width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_30d', hideClass: 'col-30d', chg: true },
-      fdv:    { id: 'fdv',    label: 'Fdv',     width: '8%',  fixed: false, sortable: true,  sortKey: 'fdv', hideClass: null },
-      fdvlp:  { id: 'fdvlp',  label: 'FDV/LP',  width: '7%',  fixed: false, sortable: true,  sortKey: 'fdv_lp', hideClass: null },
-      vol:    { id: 'vol',    label: 'Volume',  width: '8%',  fixed: false, sortable: true,  sortKey: 'volume_24h', hideClass: null },
-      price:  { id: 'price',  label: 'Price',   width: '8%',  fixed: false, sortable: true,  sortKey: 'price', hideClass: null },
-      trade:  { id: 'trade',  label: 'Trade',   width: '5%',  fixed: true,  sortable: false, hideClass: null, trade: true }
+      rank:   { id: 'rank',   label: '#',        width: '3%',  fixed: true,  sortable: false, hideClass: null },
+      symbol: { id: 'symbol', label: 'Token',    width: '14%', fixed: false, sortable: true,  sortKey: 'symbol', hideClass: null },
+      lp:     { id: 'lp',     label: 'LP Value', width: '9%',  fixed: false, sortable: true,  sortKey: 'lp_value', hideClass: null },
+      eth:    { id: 'eth',    label: 'ETH',      width: '8%',  fixed: false, sortable: true,  sortKey: 'eth_side', hideClass: null },
+      tok:    { id: 'tok',    label: 'Token',    width: '9%',  fixed: false, sortable: true,  sortKey: 'token_side', hideClass: null },
+      chg24:  { id: 'chg24',  label: '24h',      width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_24h', hideClass: null, chg: true },
+      chg7:   { id: 'chg7',   label: '7d',       width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_7d', hideClass: 'col-7d', chg: true },
+      chg30:  { id: 'chg30',  label: '30d',      width: '9%',  fixed: false, sortable: true,  sortKey: 'chg_30d', hideClass: 'col-30d', chg: true },
+      fdv:    { id: 'fdv',    label: 'Fdv',      width: '8%',  fixed: false, sortable: true,  sortKey: 'fdv', hideClass: null },
+      fdvlp:  { id: 'fdvlp',  label: 'FDV/LP',   width: '7%',  fixed: false, sortable: true,  sortKey: 'fdv_lp', hideClass: null },
+      vol:    { id: 'vol',    label: 'Volume',   width: '8%',  fixed: false, sortable: true,  sortKey: 'volume_24h', hideClass: null },
+      price:  { id: 'price',  label: 'Price',    width: '8%',  fixed: false, sortable: true,  sortKey: 'price', hideClass: null },
+      trade:  { id: 'trade',  label: 'Trade',    width: '5%',  fixed: true,  sortable: false, hideClass: null, trade: true }
     };
 
     const DEFAULT_ORDER = ['rank','symbol','lp','eth','tok','chg24','chg7','chg30','fdv','fdvlp','vol','price','trade'];
@@ -333,7 +353,6 @@
         const known = new Set(DEFAULT_ORDER);
         const cleaned = arr.filter(id => known.has(id));
         DEFAULT_ORDER.forEach(id => { if (!cleaned.includes(id)) cleaned.push(id); });
-        // enforce fixed ends
         const mid = cleaned.filter(id => id !== 'rank' && id !== 'trade');
         return ['rank', ...mid, 'trade'];
       } catch {
@@ -345,11 +364,23 @@
       try { localStorage.setItem(COL_ORDER_KEY, JSON.stringify(colOrder)); } catch (_) {}
     }
 
+    function orderIsCustom() {
+      if (colOrder.length !== DEFAULT_ORDER.length) return true;
+      return colOrder.some((id, i) => id !== DEFAULT_ORDER[i]);
+    }
+
+    function updateResetBtn() {
+      const btn = $('reset-cols');
+      if (!btn) return;
+      btn.classList.toggle('visible', orderIsCustom());
+    }
+
     function resetColOrder() {
       colOrder = DEFAULT_ORDER.slice();
       try { localStorage.removeItem(COL_ORDER_KEY); } catch (_) {}
       buildHeader();
       renderTable();
+      updateResetBtn();
     }
 
     function fmtUsd(n) {
@@ -497,10 +528,7 @@
         if (def.sortable) {
           th.classList.add('sortable');
           th.dataset.sort = def.sortKey;
-          th.addEventListener('click', (e) => {
-            if (e.target.closest('[draggable]')) return;
-            onSortClick(def.sortKey);
-          });
+          th.addEventListener('click', () => onSortClick(def.sortKey));
         }
         if (!def.fixed) {
           th.classList.add('draggable');
@@ -514,6 +542,7 @@
         tr.appendChild(th);
       });
       updateSortHeaders();
+      updateResetBtn();
     }
 
     function onDragStart(e) {
@@ -541,7 +570,6 @@
       if (from < 0 || to < 0) return;
       colOrder.splice(from, 1);
       colOrder.splice(to, 0, dragSrcId);
-      // keep rank first, trade last
       colOrder = colOrder.filter(id => id !== 'rank' && id !== 'trade');
       colOrder = ['rank', ...colOrder, 'trade'];
       saveColOrder();
