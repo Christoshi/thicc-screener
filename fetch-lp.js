@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade backfill + tRPC + DexScreener + CoinGecko + RPC launch counts
+// fetch-lp.js — pools.trade backfill + tRPC + DexScreener + CoinGecko + Blockscout launch counts
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -32,18 +32,11 @@ const TOPIC_AUCTION_CREATED =
   "0x7ede475fad18ccf0039f2b956c4d43a8b4ed0853de4daaa8ae25299f331ae3b9";
 
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
-const RPC_URLS = [
-  "https://robinhood-rpc.publicnode.com",
-  "https://rpc.mainnet.chain.robinhood.com",
-  "https://robinhood.drpc.org",
-];
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const COUNTS_BLOCKS_PER_RUN = 150_000;
 const ENRICH_CAP = 60;
 const LOG_CHUNK_BS = 15_000;
-const LOG_CHUNK_RPC = 8_000;
-const LOG_DELAY_MS = 250;
 const BLOCK_MS = 100;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -91,47 +84,16 @@ function mapLaunch(l, source) {
   };
 }
 
-async function getLatestBlock() {
+async function getLatestBlockMeta() {
   const res = await fetch(
     "https://robinhoodchain.blockscout.com/api/v2/blocks?type=block"
   );
   const json = await res.json();
-  const h = json?.items?.[0]?.height;
+  const b = json?.items?.[0];
+  const h = b?.height;
   if (!h) throw new Error("Could not get latest block");
-  return Number(h);
-}
-
-async function rpcCall(method, params) {
-  let lastErr = null;
-  for (const url of RPC_URLS) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "User-Agent": "thicc-screener/1.0",
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-      });
-      const json = await res.json();
-      if (json.error) {
-        lastErr = json.error.message || JSON.stringify(json.error);
-        continue;
-      }
-      return json.result;
-    } catch (e) {
-      lastErr = e.message;
-    }
-  }
-  throw new Error(lastErr || "RPC fail");
-}
-
-async function getLatestBlockMeta() {
-  const block = await rpcCall("eth_getBlockByNumber", ["latest", false]);
-  return {
-    number: parseInt(block.number, 16),
-    tsMs: parseInt(block.timestamp, 16) * 1000,
-  };
+  const tsMs = b.timestamp ? Date.parse(b.timestamp) : Date.now();
+  return { number: Number(h), tsMs: Number.isFinite(tsMs) ? tsMs : Date.now() };
 }
 
 function decodeTokenLaunched(log) {
@@ -150,6 +112,12 @@ function decodeTokenLaunched(log) {
   return { token, poolId, blockNumber: bn, txHash: log.transactionHash || null };
 }
 
+function parseBlockNumber(log) {
+  const raw = log?.blockNumber;
+  if (typeof raw === "string" && raw.startsWith("0x")) return parseInt(raw, 16);
+  return Number(raw) || 0;
+}
+
 async function fetchLogsChunkBS(address, topic0, fromBlock, toBlock) {
   const url =
     `${BLOCKSCOUT}?module=logs&action=getLogs` +
@@ -159,12 +127,24 @@ async function fetchLogsChunkBS(address, topic0, fromBlock, toBlock) {
     const res = await fetch(url, {
       headers: { "User-Agent": "thicc-screener/1.0" },
     });
+    if (!res.ok) return null;
     const json = await res.json();
-    if (!Array.isArray(json.result)) return [];
-    return json.result;
+    if (Array.isArray(json.result)) return json.result;
+    const msg = String(json.message || json.result || "");
+    if (/no logs|no records|not found/i.test(msg)) return [];
+    return null;
   } catch {
-    return [];
+    return null;
   }
+}
+
+async function fetchLogsChunkBSRetry(address, topic0, fromBlock, toBlock) {
+  let logs = await fetchLogsChunkBS(address, topic0, fromBlock, toBlock);
+  if (logs == null) {
+    await sleep(800);
+    logs = await fetchLogsChunkBS(address, topic0, fromBlock, toBlock);
+  }
+  return logs;
 }
 
 async function fetchLogsForRange(fromBlock, toBlock) {
@@ -173,7 +153,7 @@ async function fetchLogsForRange(fromBlock, toBlock) {
     let start = fromBlock;
     while (start <= toBlock) {
       const end = Math.min(start + LOG_CHUNK_BS - 1, toBlock);
-      const logs = await fetchLogsChunkBS(addr, TOPIC_TOKEN_LAUNCHED, start, end);
+      const logs = (await fetchLogsChunkBSRetry(addr, TOPIC_TOKEN_LAUNCHED, start, end)) || [];
       for (const log of logs) {
         const d = decodeTokenLaunched(log);
         if (d) found.push({ ...d, launchpad: addr.toLowerCase() });
@@ -185,49 +165,31 @@ async function fetchLogsForRange(fromBlock, toBlock) {
   return found;
 }
 
-async function ethGetLogs(address, topic0, fromBlock, toBlock) {
-  const result = await rpcCall("eth_getLogs", [
-    {
-      address: address.toLowerCase(),
-      topics: [topic0],
-      fromBlock: "0x" + fromBlock.toString(16),
-      toBlock: "0x" + toBlock.toString(16),
-    },
-  ]);
-  return Array.isArray(result) ? result : [];
-}
-
 function blockToTs(blockNum, tipNum, tipTsMs) {
   return tipTsMs - (tipNum - blockNum) * BLOCK_MS;
 }
 
-async function collectTimestampsRpc(address, topic0, fromBlock, toBlock, tip) {
+async function collectTimestampsBS(address, topic0, fromBlock, toBlock, tip) {
   const ts = [];
-  let okChunks = 0;
-  let failChunks = 0;
+  let contiguousTo = fromBlock - 1;
   let start = fromBlock;
   while (start <= toBlock) {
-    const end = Math.min(start + LOG_CHUNK_RPC - 1, toBlock);
-    try {
-      const logs = await ethGetLogs(address, topic0, start, end);
-      okChunks++;
-      for (const log of logs) {
-        const bn =
-          typeof log.blockNumber === "string"
-            ? parseInt(log.blockNumber, 16)
-            : Number(log.blockNumber) || 0;
-        const t = blockToTs(bn, tip.number, tip.tsMs);
-        if (t > 0) ts.push(t);
-      }
-    } catch (e) {
-      failChunks++;
-      console.log("  rpc logs fail", address.slice(0, 12), start, e.message);
-      await sleep(1000);
+    const end = Math.min(start + LOG_CHUNK_BS - 1, toBlock);
+    const logs = await fetchLogsChunkBSRetry(address, topic0, start, end);
+    if (logs == null) {
+      console.log("  bs logs fail", address.slice(0, 12), start, end);
+      break;
     }
-    await sleep(LOG_DELAY_MS);
+    for (const log of logs) {
+      const bn = parseBlockNumber(log);
+      const t = blockToTs(bn, tip.number, tip.tsMs);
+      if (t > 0) ts.push(t);
+    }
+    contiguousTo = end;
+    await sleep(300);
     start = end + 1;
   }
-  return { timestamps: ts, okChunks, failChunks };
+  return { timestamps: ts, contiguousTo };
 }
 
 async function loadLaunchesState() {
@@ -484,23 +446,16 @@ async function main() {
   const state = await loadLaunchesState();
   const counts = await loadLaunchCounts();
 
-  let latest = 0;
+  let tip = null;
   try {
-    latest = await getLatestBlock();
-    console.log("Latest block:", latest);
+    tip = await getLatestBlockMeta();
+    console.log("Blockscout tip:", tip.number, "ts", tip.tsMs);
   } catch (e) {
     console.log("Block height fail:", e.message);
   }
 
-  let tip = null;
-  try {
-    tip = await getLatestBlockMeta();
-    console.log("RPC tip:", tip.number, "ts", tip.tsMs);
-  } catch (e) {
-    console.log("RPC tip fail:", e.message);
-  }
+  const latest = tip?.number || 0;
 
-  // --- TokenLaunched discovery (Blockscout, unchanged) ---
   if (latest > 0) {
     if (!state.lastScannedBlock || state.lastScannedBlock < state.startBlock - 1) {
       state.lastScannedBlock = state.startBlock - 1;
@@ -544,7 +499,6 @@ async function main() {
     }
   }
 
-  // --- Launch counts (public RPC eth_getLogs) ---
   if (tip) {
     if (
       !counts.lastScannedBlock ||
@@ -562,14 +516,13 @@ async function main() {
     const cFrom = counts.lastScannedBlock + 1;
     const cTo = Math.min(cFrom + COUNTS_BLOCKS_PER_RUN - 1, tip.number);
     if (cFrom <= tip.number) {
-      console.log(`Scanning launch counts (RPC) ${cFrom} → ${cTo}`);
+      console.log(`Scanning launch counts (Blockscout) ${cFrom} → ${cTo}`);
       let newTotal = 0;
       let newCrowd = 0;
-      let okChunks = 0;
-      let failChunks = 0;
+      let minContig = cTo;
 
       for (const addr of ENTRY_CONTRACTS) {
-        const r = await collectTimestampsRpc(
+        const r = await collectTimestampsBS(
           addr,
           TOPIC_TOKEN_CREATED,
           cFrom,
@@ -578,11 +531,10 @@ async function main() {
         );
         counts.total.push(...r.timestamps);
         newTotal += r.timestamps.length;
-        okChunks += r.okChunks;
-        failChunks += r.failChunks;
+        minContig = Math.min(minContig, r.contiguousTo);
       }
       {
-        const r = await collectTimestampsRpc(
+        const r = await collectTimestampsBS(
           CCA_FACTORY,
           TOPIC_AUCTION_CREATED,
           cFrom,
@@ -591,15 +543,14 @@ async function main() {
         );
         counts.crowd.push(...r.timestamps);
         newCrowd += r.timestamps.length;
-        okChunks += r.okChunks;
-        failChunks += r.failChunks;
+        minContig = Math.min(minContig, r.contiguousTo);
       }
 
       console.log("  new TokenCreated:", newTotal, "AuctionCreated:", newCrowd);
-      console.log("  chunks ok/fail:", okChunks, failChunks);
+      console.log("  contiguousTo", minContig);
 
-      if (failChunks === 0 || okChunks >= failChunks) {
-        counts.lastScannedBlock = cTo;
+      if (minContig >= cFrom) {
+        counts.lastScannedBlock = minContig;
         console.log("  counts cursor →", counts.lastScannedBlock);
       } else {
         console.log("  counts cursor NOT advanced");
@@ -818,7 +769,7 @@ async function main() {
   console.log("Done. stats:", stats);
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((e) => {
+  console.error(e);
   process.exit(1);
 });
