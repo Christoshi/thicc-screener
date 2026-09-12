@@ -1,4 +1,4 @@
-// fetch-lp.js — pools.trade backfill + tRPC + DexScreener + CoinGecko + Blockscout launch counts
+// fetch-lp.js — pools.trade backfill + tRPC + DexScreener + CoinGecko + launch counts
 import fs from "fs/promises";
 
 const OUTPUT_PATH = "data.json";
@@ -42,6 +42,7 @@ const BLOCKS_PER_RUN = 80_000;
 const COUNTS_BLOCKS_PER_RUN = 150_000;
 const ENRICH_CAP = 60;
 const LOG_CHUNK_BS = 15_000;
+const LOG_CHUNK_RPC = 2000;
 const BLOCK_MS = 100;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -220,24 +221,71 @@ function blockToTs(blockNum, tipNum, tipTsMs) {
   return tipTsMs - (tipNum - blockNum) * BLOCK_MS;
 }
 
+async function ethGetLogs(address, topic0, fromBlock, toBlock) {
+  const result = await rpcCall("eth_getLogs", [
+    {
+      address: address.toLowerCase(),
+      topics: [topic0],
+      fromBlock: "0x" + fromBlock.toString(16),
+      toBlock: "0x" + toBlock.toString(16),
+    },
+  ]);
+  return Array.isArray(result) ? result : [];
+}
+
+function logTs(log, tip) {
+  if (log.timeStamp) {
+    const raw = log.timeStamp;
+    const n =
+      typeof raw === "string" && raw.startsWith("0x")
+        ? parseInt(raw, 16)
+        : Number(raw);
+    if (Number.isFinite(n) && n > 1e12) return n;
+    if (Number.isFinite(n) && n > 1e9) return n * 1000;
+  }
+  const bn = parseBlockNumber(log);
+  return blockToTs(bn, tip.number, tip.tsMs);
+}
+
 async function collectTimestampsBS(address, topic0, fromBlock, toBlock, tip) {
   const ts = [];
   let contiguousTo = fromBlock - 1;
   let start = fromBlock;
   while (start <= toBlock) {
-    const end = Math.min(start + LOG_CHUNK_BS - 1, toBlock);
-    const logs = await fetchLogsChunkBSRetry(address, topic0, start, end);
+    let end = Math.min(start + LOG_CHUNK_RPC - 1, toBlock);
+    let logs = await fetchLogsChunkBSRetry(address, topic0, start, end);
     if (logs == null) {
-      console.log("  bs logs fail", address.slice(0, 12), start, end);
+      let span = end - start;
+      for (let attempt = 1; attempt <= 3 && logs == null; attempt++) {
+        try {
+          logs = await ethGetLogs(address, topic0, start, end);
+        } catch (e) {
+          console.log(
+            "  rpc logs fail",
+            address.slice(0, 12),
+            start,
+            end,
+            e.message,
+            `try ${attempt}`
+          );
+          await sleep(600 * attempt);
+          if (span > 200) {
+            span = Math.floor(span / 2);
+            end = start + span;
+          }
+        }
+      }
+    }
+    if (logs == null) {
+      console.log("  chunk abandoned", address.slice(0, 12), start, "contiguousTo", contiguousTo);
       break;
     }
     for (const log of logs) {
-      const bn = parseBlockNumber(log);
-      const t = blockToTs(bn, tip.number, tip.tsMs);
+      const t = logTs(log, tip);
       if (t > 0) ts.push(t);
     }
     contiguousTo = end;
-    await sleep(300);
+    await sleep(200);
     start = end + 1;
   }
   return { timestamps: ts, contiguousTo };
@@ -567,7 +615,7 @@ async function main() {
     const cFrom = counts.lastScannedBlock + 1;
     const cTo = Math.min(cFrom + COUNTS_BLOCKS_PER_RUN - 1, tip.number);
     if (cFrom <= tip.number) {
-      console.log(`Scanning launch counts (Blockscout) ${cFrom} → ${cTo}`);
+      console.log(`Scanning launch counts ${cFrom} → ${cTo}`);
       let newTotal = 0;
       let newCrowd = 0;
       let minContig = cTo;
