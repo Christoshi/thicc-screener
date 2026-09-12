@@ -32,6 +32,11 @@ const TOPIC_AUCTION_CREATED =
   "0x7ede475fad18ccf0039f2b956c4d43a8b4ed0853de4daaa8ae25299f331ae3b9";
 
 const BLOCKSCOUT = "https://robinhoodchain.blockscout.com/api";
+const RPC_URLS = [
+  "https://rpc.mainnet.chain.robinhood.com",
+  "https://robinhood-rpc.publicnode.com",
+  "https://robinhood.drpc.org",
+];
 const START_BLOCK = 28519960;
 const BLOCKS_PER_RUN = 80_000;
 const COUNTS_BLOCKS_PER_RUN = 150_000;
@@ -84,16 +89,60 @@ function mapLaunch(l, source) {
   };
 }
 
+async function rpcCall(method, params) {
+  let lastErr = null;
+  for (const url of RPC_URLS) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "thicc-screener/1.0",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      });
+      const text = await res.text();
+      if (text.trimStart().startsWith("<")) {
+        lastErr = "html from " + url;
+        continue;
+      }
+      const json = JSON.parse(text);
+      if (json.error) {
+        lastErr = json.error.message || JSON.stringify(json.error);
+        continue;
+      }
+      return json.result;
+    } catch (e) {
+      lastErr = e.message;
+    }
+  }
+  throw new Error(lastErr || "RPC fail");
+}
+
 async function getLatestBlockMeta() {
+  try {
+    const block = await rpcCall("eth_getBlockByNumber", ["latest", false]);
+    return {
+      number: parseInt(block.number, 16),
+      tsMs: parseInt(block.timestamp, 16) * 1000,
+    };
+  } catch (e) {
+    console.log("  RPC tip skip:", e.message);
+  }
+
   const res = await fetch(
-    "https://robinhoodchain.blockscout.com/api/v2/blocks?type=block"
+    `${BLOCKSCOUT}?module=block&action=eth_block_number`,
+    { headers: { "User-Agent": "thicc-screener/1.0" } }
   );
-  const json = await res.json();
-  const b = json?.items?.[0];
-  const h = b?.height;
-  if (!h) throw new Error("Could not get latest block");
-  const tsMs = b.timestamp ? Date.parse(b.timestamp) : Date.now();
-  return { number: Number(h), tsMs: Number.isFinite(tsMs) ? tsMs : Date.now() };
+  const text = await res.text();
+  if (text.trimStart().startsWith("<")) {
+    throw new Error("Blockscout returned HTML");
+  }
+  const json = JSON.parse(text);
+  const hex = json.result?.result || json.result;
+  const number = parseInt(hex, 16);
+  if (!number) throw new Error("Could not get latest block");
+  return { number, tsMs: Date.now() };
 }
 
 function decodeTokenLaunched(log) {
@@ -128,7 +177,9 @@ async function fetchLogsChunkBS(address, topic0, fromBlock, toBlock) {
       headers: { "User-Agent": "thicc-screener/1.0" },
     });
     if (!res.ok) return null;
-    const json = await res.json();
+    const text = await res.text();
+    if (text.trimStart().startsWith("<")) return null;
+    const json = JSON.parse(text);
     if (Array.isArray(json.result)) return json.result;
     const msg = String(json.message || json.result || "");
     if (/no logs|no records|not found/i.test(msg)) return [];
@@ -449,7 +500,7 @@ async function main() {
   let tip = null;
   try {
     tip = await getLatestBlockMeta();
-    console.log("Blockscout tip:", tip.number, "ts", tip.tsMs);
+    console.log("Tip:", tip.number, "ts", tip.tsMs);
   } catch (e) {
     console.log("Block height fail:", e.message);
   }
